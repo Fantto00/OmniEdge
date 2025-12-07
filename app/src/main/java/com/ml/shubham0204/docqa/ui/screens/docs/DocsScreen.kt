@@ -27,9 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,21 +46,47 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.ml.shubham0204.docqa.data.Document
 import com.ml.shubham0204.docqa.domain.readers.Readers
+import com.ml.shubham0204.docqa.domain.readers.getMimeType
 import com.ml.shubham0204.docqa.ui.components.AppAlertDialog
 import com.ml.shubham0204.docqa.ui.components.createAlertDialog
 import com.ml.shubham0204.docqa.ui.theme.DocQATheme
 
 private val showDocDetailDialog = mutableStateOf(false)
 private val dialogDoc = mutableStateOf<Document?>(null)
+
+@Preview
+@Composable
+private fun DocsScreenPreview() {
+    val uiState =
+        DocsScreenUIState(
+            documents =
+                listOf(
+                    Document(
+                        docId = 1,
+                        docFileName = "Document 1",
+                        docText = "Text 1",
+                        docAddedTime = 0
+                    ),
+                    Document(
+                        docId = 2,
+                        docFileName = "Document 2",
+                        docText = "Text 2",
+                        docAddedTime = 0
+                    ),
+                ),
+            docDownloadState = DocDownloadState.DOWNLOAD_NONE,
+        )
+    DocsScreen(uiState = uiState, onBackClick = {}, onEvent = {})
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +117,9 @@ fun DocsScreen(
                 )
             },
         ) { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding).fillMaxWidth()) {
+            Column(modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxWidth()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 DocsList(uiState.documents, onEvent)
                 DocOperations(uiState.docDownloadState, onEvent)
@@ -110,7 +136,9 @@ private fun ColumnScope.DocsList(
     docs: List<Document>,
     onEvent: (DocsScreenUIEvent) -> Unit,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize().weight(1f)) {
+    LazyColumn(modifier = Modifier
+        .fillMaxSize()
+        .weight(1f)) {
         items(docs) { doc ->
             DocsListItem(
                 doc.copy(
@@ -139,11 +167,14 @@ private fun DocsListItem(
                 .clickable {
                     dialogDoc.value = document
                     showDocDetailDialog.value = true
-                }.background(Color.White)
+                }
+                .background(Color.White)
                 .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)) {
             Text(
                 text = document.docFileName,
                 style = MaterialTheme.typography.bodyLarge,
@@ -187,16 +218,65 @@ private fun DocsListItem(
 }
 
 @Composable
+private fun ChooseDocTypeDialog(
+    onDismiss: () -> Unit,
+    onDocTypeSelected: (Readers.DocumentType) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose Document Type") },
+        text = {
+            Column {
+                Text(
+                    "PDF",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDocTypeSelected(Readers.DocumentType.PDF) }
+                        .padding(vertical = 16.dp)
+                )
+                Text(
+                    "MS Word (DOCX)",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDocTypeSelected(Readers.DocumentType.MS_DOCX) }
+                        .padding(vertical = 16.dp)
+                )
+                Text(
+                    "Plain Text",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDocTypeSelected(Readers.DocumentType.PLAIN_TEXT) }
+                        .padding(vertical = 16.dp)
+                )
+                Text(
+                    "Markdown",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDocTypeSelected(Readers.DocumentType.MARKDOWN) }
+                        .padding(vertical = 16.dp)
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 private fun DocOperations(
     docDownloadState: DocDownloadState,
     onEvent: (DocsScreenUIEvent) -> Unit,
 ) {
     val context = LocalContext.current
-    // Intent to get file from user's device
-    // See https://developer.android.com/guide/components/intents-common#GetFile
-    var docType = Readers.DocumentType.PDF
+    var docType by remember { mutableStateOf(Readers.DocumentType.PDF) }
     var pdfUrl by remember { mutableStateOf("") }
     var showUrlDialog by remember { mutableStateOf(false) }
+    var showChooseDocTypeDialog by remember { mutableStateOf(false) }
+
     val launcher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult(),
@@ -206,63 +286,44 @@ private fun DocOperations(
             }
         }
 
-    Row(
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp).fillMaxWidth(),
-    ) {
-        // Upload PDF from device
-        Button(
-            modifier = Modifier.weight(1f).padding(2.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6650a4)),
-            onClick = {
-                docType = Readers.DocumentType.PDF
-                launcher.launch(
-                    Intent(Intent.ACTION_GET_CONTENT).apply { type = "application/pdf" },
-                )
-            },
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add PDF document",
-                tint = Color.White,
-            )
-            Text(text = "PDF", color = Color.White)
-        }
+    if (showChooseDocTypeDialog) {
+        ChooseDocTypeDialog(
+            onDismiss = { showChooseDocTypeDialog = false },
+            onDocTypeSelected = { selectedDocType ->
+                showChooseDocTypeDialog = false
+                docType = selectedDocType
+                launcher.launch(Intent(Intent.ACTION_GET_CONTENT).apply {
+                    type = docType.getMimeType()
+                })
+            }
+        )
+    }
 
-        // Upload DOCX from device
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 16.dp)
+            .fillMaxWidth(),
+    ) {
+        // Upload from device
         Button(
-            modifier = Modifier.weight(1f).padding(2.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBB94C7)),
-            onClick = {
-                docType = Readers.DocumentType.MS_DOCX
-                launcher.launch(
-                    Intent(Intent.ACTION_GET_CONTENT).apply {
-                        type =
-                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    },
-                )
-            },
+            modifier = Modifier
+                .weight(1f)
+                .padding(2.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6650a4)),
+            onClick = { showChooseDocTypeDialog = true },
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add DOCX document",
-                tint = Color.White,
-            )
-            Text(text = "DOCX", color = Color.White)
+            Text(text = "Add From Device", color = Color.White)
         }
 
         // Add from URL
         Button(
-            modifier = Modifier.weight(1f).padding(2.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(2.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF643A71)),
             onClick = { showUrlDialog = true },
         ) {
-            Icon(
-                imageVector = Icons.Default.Link,
-                contentDescription = "Add document from URL",
-                tint = Color.White,
-                modifier = Modifier.rotate(45f),
-            )
-            Text(text = "URL", color = Color.White)
+            Text(text = "Add From URL", color = Color.White)
         }
     }
 
@@ -349,7 +410,9 @@ private fun DocDetailDialog() {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = doc?.docText ?: "",
-                        modifier = Modifier.height(200.dp).verticalScroll(rememberScrollState()),
+                        modifier = Modifier
+                            .height(200.dp)
+                            .verticalScroll(rememberScrollState()),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
