@@ -1,2 +1,1 @@
-- Allow use of local LLM models (with LiteRT) for document question-answering
-- Gated models can be downloaded by providing a HuggingFace access token to the app
+- Allow users to select text and Markdown files
