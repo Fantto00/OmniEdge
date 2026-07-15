@@ -92,6 +92,25 @@ class ChatViewModel(
                         ).show()
                     return
                 }
+                if (event.query.trim().isEmpty()) {
+                    Toast
+                        .makeText(context, "Enter a query to execute", Toast.LENGTH_LONG)
+                        .show()
+                    return
+                }
+
+                // If a local model is loaded, skip the Gemini API key check
+                if (liteRTAPI.isLoaded) {
+                    _chatScreenUIState.value =
+                        _chatScreenUIState.value.copy(isGeneratingResponse = true)
+                    _chatScreenUIState.value =
+                        _chatScreenUIState.value.copy(question = event.query)
+                    val llm = liteRTAPI
+                    Toast.makeText(context, "Using local model...", Toast.LENGTH_LONG).show()
+                    getAnswer(llm, event.query, event.prompt)
+                    return
+                }
+
                 if (!checkValidAPIKey()) {
                     createAlertDialog(
                         dialogTitle = "Invalid API Key",
@@ -110,26 +129,15 @@ class ChatViewModel(
                     )
                     return
                 }
-                if (event.query.trim().isEmpty()) {
-                    Toast
-                        .makeText(context, "Enter a query to execute", Toast.LENGTH_LONG)
-                        .show()
-                    return
-                }
                 _chatScreenUIState.value =
                     _chatScreenUIState.value.copy(isGeneratingResponse = true)
                 _chatScreenUIState.value =
                     _chatScreenUIState.value.copy(question = event.query)
 
-                val llm =
-                    if (liteRTAPI.isLoaded) {
-                        Toast.makeText(context, "Using local model...", Toast.LENGTH_LONG).show()
-                        liteRTAPI
-                    } else {
-                        val apiKey = geminiAPIKey.getAPIKey() ?: throw Exception("Gemini API key is null")
-                        Toast.makeText(context, "Using Gemini cloud model...", Toast.LENGTH_LONG).show()
-                        GeminiRemoteAPI(apiKey)
-                    }
+                val apiKey = geminiAPIKey.getAPIKey()
+                    ?: throw Exception("Gemini API key is null")
+                val llm = GeminiRemoteAPI(apiKey)
+                Toast.makeText(context, "Using Gemini cloud model...", Toast.LENGTH_LONG).show()
                 getAnswer(llm, event.query, event.prompt)
             }
 
