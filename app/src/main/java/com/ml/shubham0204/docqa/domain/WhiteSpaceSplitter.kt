@@ -5,6 +5,8 @@ import kotlin.math.min
 
 class WhiteSpaceSplitter {
     companion object {
+        private val sentenceDelimiters = setOf('。', '！', '？', '；', '.', '!', '?', ';')
+
         fun createChunks(
             docText: String,
             chunkSize: Int,
@@ -14,31 +16,12 @@ class WhiteSpaceSplitter {
         ): List<String> {
             val textChunks = ArrayList<String>()
             docText.split(separatorParagraph).forEach { paragraph ->
-                var currChunk = ""
-                val chunks = ArrayList<String>()
-                paragraph.split(separator).forEach { word ->
-                    val newChunk =
-                        currChunk +
-                            (
-                                if (currChunk.isNotEmpty()) {
-                                    separator
-                                } else {
-                                    ""
-                                }
-                            ) +
-                            word
-                    if (newChunk.length <= chunkSize) {
-                        currChunk = newChunk
+                val chunks =
+                    if (paragraph.none(Char::isWhitespace)) {
+                        createWhitespaceFreeChunks(paragraph, chunkSize)
                     } else {
-                        if (currChunk.isNotEmpty()) {
-                            chunks.add(currChunk)
-                        }
-                        currChunk = word
+                        createWhitespaceChunks(paragraph, chunkSize, separator)
                     }
-                }
-                if (currChunk.isNotEmpty()) {
-                    chunks.add(currChunk)
-                }
 
                 val overlappingChunks = ArrayList<String>(chunks)
                 if (chunkOverlap > 1 && chunks.isNotEmpty()) {
@@ -56,6 +39,66 @@ class WhiteSpaceSplitter {
                 textChunks.addAll(overlappingChunks)
             }
             return textChunks
+        }
+
+        private fun createWhitespaceChunks(
+            paragraph: String,
+            chunkSize: Int,
+            separator: String,
+        ): List<String> {
+            var currChunk = ""
+            val chunks = ArrayList<String>()
+            paragraph.split(separator).forEach { word ->
+                val newChunk =
+                    currChunk +
+                        (
+                            if (currChunk.isNotEmpty()) {
+                                separator
+                            } else {
+                                ""
+                            }
+                        ) +
+                        word
+                if (newChunk.length <= chunkSize) {
+                    currChunk = newChunk
+                } else {
+                    if (currChunk.isNotEmpty()) {
+                        chunks.add(currChunk)
+                    }
+                    currChunk = word
+                }
+            }
+            if (currChunk.isNotEmpty()) {
+                chunks.add(currChunk)
+            }
+            return chunks
+        }
+
+        private fun createWhitespaceFreeChunks(
+            paragraph: String,
+            chunkSize: Int,
+        ): List<String> {
+            if (paragraph.isEmpty()) {
+                return emptyList()
+            }
+
+            val chunks = ArrayList<String>()
+            var start = 0
+            while (start < paragraph.length) {
+                val end = min(start + chunkSize, paragraph.length)
+                val boundary =
+                    (end - 1 downTo start + chunkSize / 2)
+                        .firstOrNull { paragraph[it] in sentenceDelimiters }
+                val chunkEnd =
+                    if (end == paragraph.length) {
+                        end
+                    } else {
+                        (boundary ?: end - 1) + 1
+                    }
+                chunks.add(paragraph.substring(start, chunkEnd).trim())
+                start = chunkEnd
+            }
+            return chunks
         }
     }
 }
