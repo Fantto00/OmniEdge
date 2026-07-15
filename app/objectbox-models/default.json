@@ -43,7 +43,7 @@
     },
     {
       "id": "2:1370145163078906664",
-      "lastPropertyId": "4:901421885162412022",
+      "lastPropertyId": "10:5590566303020483783",
       "name": "Document",
       "properties": [
         {
@@ -66,6 +66,36 @@
           "id": "4:901421885162412022",
           "name": "docAddedTime",
           "type": 6
+        },
+        {
+          "id": "5:6536583386135994502",
+          "name": "sourceType",
+          "type": 9
+        },
+        {
+          "id": "6:3153921216883717677",
+          "name": "sourceMimeType",
+          "type": 9
+        },
+        {
+          "id": "7:5567941060032783323",
+          "name": "sourceUri",
+          "type": 9
+        },
+        {
+          "id": "8:2586075567333027080",
+          "name": "contentHash",
+          "type": 9
+        },
+        {
+          "id": "9:1576891864382475648",
+          "name": "extractorVersion",
+          "type": 9
+        },
+        {
+          "id": "10:5590566303020483783",
+          "name": "embeddingModelVersion",
+          "type": 9
         }
       ],
       "relations": []

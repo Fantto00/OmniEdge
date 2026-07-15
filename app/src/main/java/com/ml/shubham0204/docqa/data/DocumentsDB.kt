@@ -10,11 +10,34 @@ import org.koin.core.annotation.Single
 @Single
 class DocumentsDB {
     private val docsBox = ObjectBoxStore.store.boxFor(Document::class.java)
+    private val chunksBox = ObjectBoxStore.store.boxFor(Chunk::class.java)
 
-    fun addDocument(document: Document): Long = docsBox.put(document)
+    fun addDocumentAndChunks(
+        document: Document,
+        chunks: List<Chunk>,
+    ): Long {
+        var docId = 0L
+        ObjectBoxStore.store.runInTx {
+            docId = docsBox.put(document)
+            chunks.forEach { chunk ->
+                chunk.docId = docId
+                chunksBox.put(chunk)
+            }
+        }
+        return docId
+    }
 
-    fun removeDocument(docId: Long) {
-        docsBox.remove(docId)
+    fun removeDocumentAndChunks(docId: Long) {
+        ObjectBoxStore.store.runInTx {
+            val chunkIds =
+                chunksBox
+                    .query(Chunk_.docId.equal(docId))
+                    .build()
+                    .findIds()
+                    .toList()
+            chunksBox.removeByIds(chunkIds)
+            docsBox.remove(docId)
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

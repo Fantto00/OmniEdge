@@ -20,6 +20,12 @@ data class Document(
     var docText: String = "",
     var docFileName: String = "",
     var docAddedTime: Long = 0,
+    var sourceType: String = "DOCUMENT",
+    var sourceMimeType: String = "",
+    var sourceUri: String = "",
+    var contentHash: String = "",
+    var extractorVersion: String = "",
+    var embeddingModelVersion: String = "",
 )
 
 data class RetrievedContext(

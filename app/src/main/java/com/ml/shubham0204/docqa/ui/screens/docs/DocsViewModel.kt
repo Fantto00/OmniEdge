@@ -6,13 +6,12 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ml.shubham0204.docqa.data.Chunk
-import com.ml.shubham0204.docqa.data.ChunksDB
 import com.ml.shubham0204.docqa.data.Document
 import com.ml.shubham0204.docqa.data.DocumentsDB
-import com.ml.shubham0204.docqa.domain.SentenceEmbeddingProvider
-import com.ml.shubham0204.docqa.domain.WhiteSpaceSplitter
+import com.ml.shubham0204.docqa.domain.ingestion.ContentIngestionUseCase
+import com.ml.shubham0204.docqa.domain.ingestion.ContentSource
 import com.ml.shubham0204.docqa.domain.readers.Readers
+import com.ml.shubham0204.docqa.domain.readers.getMimeType
 import hideProgressDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +22,6 @@ import org.koin.android.annotation.KoinViewModel
 import setProgressDialogText
 import showProgressDialog
 import java.io.File
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.URL
@@ -62,8 +60,7 @@ data class DocsScreenUIState(
 class DocsViewModel(
     private val contentResolver: ContentResolver,
     private val documentsDB: DocumentsDB,
-    private val chunksDB: ChunksDB,
-    private val sentenceEncoder: SentenceEmbeddingProvider,
+    private val contentIngestionUseCase: ContentIngestionUseCase,
 ) : ViewModel() {
     private val _docsScreenUIState = MutableStateFlow(DocsScreenUIState())
     val docsScreenUIState: StateFlow<DocsScreenUIState> = _docsScreenUIState
@@ -79,23 +76,22 @@ class DocsViewModel(
     fun onEvent(event: DocsScreenUIEvent) {
         when (event) {
             is DocsScreenUIEvent.OnDocSelected -> {
-                var docFileName = ""
-                // Retrieve file information from URI
-                // See
-                // https://developer.android.com/training/secure-file-sharing/retrieve-info#RetrieveFileInfo
-                contentResolver.query(event.fileUri, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    cursor.moveToFirst()
-                    docFileName = cursor.getString(nameIndex)
-                }
-                contentResolver.openInputStream(event.fileUri)?.let { inputStream ->
-                    showProgressDialog()
-                    viewModelScope.launch(Dispatchers.IO) {
-                        addChunksFromInputStream(
-                            docFileName,
-                            event.docType,
-                            inputStream,
+                showProgressDialog()
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        contentIngestionUseCase.ingestDocument(
+                            ContentSource.Document(
+                                uri = event.fileUri,
+                                displayName = getDocumentDisplayName(event.fileUri),
+                                mimeType = event.docType.getMimeType(),
+                                documentType = event.docType,
+                            ),
+                            ::setProgressDialogText,
                         )
+                    } finally {
+                        withContext(Dispatchers.Main) {
+                            hideProgressDialog()
+                        }
                     }
                 }
             }
@@ -118,10 +114,15 @@ class DocsViewModel(
                                 }
                             }
 
-                            addChunksFromInputStream(
-                                docFileName,
-                                event.docType,
-                                cachedDocument.inputStream(),
+                            contentIngestionUseCase.ingestDocument(
+                                ContentSource.Document(
+                                    uri = Uri.fromFile(cachedDocument),
+                                    sourceUri = event.url,
+                                    displayName = docFileName,
+                                    mimeType = event.docType.getMimeType(),
+                                    documentType = event.docType,
+                                ),
+                                ::setProgressDialogText,
                             )
                             withContext(Dispatchers.Main) {
                                 _docsScreenUIState.value =
@@ -148,60 +149,27 @@ class DocsViewModel(
                     } finally {
                         connection?.disconnect()
                         cachedDocument?.delete()
+                        withContext(Dispatchers.Main) {
+                            hideProgressDialog()
+                        }
                     }
                 }
             }
 
             is DocsScreenUIEvent.OnRemoveDoc -> {
-                documentsDB.removeDocument(event.docId)
-                chunksDB.removeChunks(event.docId)
+                documentsDB.removeDocumentAndChunks(event.docId)
             }
         }
     }
 
-    private suspend fun addChunksFromInputStream(
-        docFileName: String,
-        docType: Readers.DocumentType,
-        inputStream: InputStream,
-    ) {
-        val text = inputStream.use {
-            Readers
-                .getReaderForDocType(docType)
-                .readFromInputStream(it)
-                ?: return
+    private fun getDocumentDisplayName(uri: Uri): String {
+        contentResolver.query(uri, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                return cursor.getString(nameIndex)
+            }
         }
-        val newDocId =
-            documentsDB.addDocument(
-                Document(
-                    docText = text,
-                    docFileName = docFileName,
-                    docAddedTime = System.currentTimeMillis(),
-                ),
-            )
-        setProgressDialogText("Creating chunks...")
-        val chunks =
-            WhiteSpaceSplitter.createChunks(
-                text,
-                chunkSize = 500,
-                chunkOverlap = 50,
-            )
-        setProgressDialogText("Adding chunks to database...")
-        val size = chunks.size
-        chunks.forEachIndexed { index, s ->
-            setProgressDialogText("Added ${index + 1}/$size chunk(s) to database...")
-            val embedding = sentenceEncoder.encodeText(s)
-            chunksDB.addChunk(
-                Chunk(
-                    docId = newDocId,
-                    docFileName = docFileName,
-                    chunkData = s,
-                    chunkEmbedding = embedding,
-                ),
-            )
-        }
-        withContext(Dispatchers.IO) {
-            hideProgressDialog()
-        }
+        return "document"
     }
 
     // Extracts the file name from the URL
