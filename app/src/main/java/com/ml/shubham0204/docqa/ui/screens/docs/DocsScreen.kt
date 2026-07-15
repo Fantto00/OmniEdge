@@ -359,6 +359,42 @@ private fun DocOperations(
         }
     }
 
+    Column(
+        modifier = Modifier.padding(horizontal = 10.dp),
+    ) {
+        Text(
+            text = uiState.speechModel.status,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.DarkGray,
+        )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Button(
+                enabled = !uiState.speechModel.isBusy,
+                onClick = { onEvent(DocsScreenUIEvent.OnSpeechModelSetup) },
+            ) {
+                Text(
+                    text =
+                        if (uiState.speechModel.isReady) {
+                            "ASR Model Ready"
+                        } else {
+                            "Set Up Chinese ASR"
+                        },
+                )
+            }
+            if (uiState.speechModel.isBusy) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)),
+                    onClick = { onEvent(DocsScreenUIEvent.OnSpeechModelSetupCancelled) },
+                ) {
+                    Text(text = "Cancel Setup")
+                }
+            }
+        }
+    }
+
     when (uiState.docDownloadState) {
         DocDownloadState.DOWNLOAD_NONE -> {}
         DocDownloadState.DOWNLOAD_IN_PROGRESS -> {

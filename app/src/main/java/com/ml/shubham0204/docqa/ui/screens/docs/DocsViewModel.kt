@@ -8,12 +8,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ml.shubham0204.docqa.data.Document
 import com.ml.shubham0204.docqa.data.DocumentsDB
+import com.ml.shubham0204.docqa.domain.asr.SpeechModelManager
 import com.ml.shubham0204.docqa.domain.ingestion.ContentIngestionUseCase
 import com.ml.shubham0204.docqa.domain.ingestion.ContentSource
 import com.ml.shubham0204.docqa.domain.readers.Readers
 import com.ml.shubham0204.docqa.domain.readers.getMimeType
 import hideProgressDialog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -37,6 +40,10 @@ sealed interface DocsScreenUIEvent {
         val imageUri: Uri,
     ) : DocsScreenUIEvent
 
+    data object OnSpeechModelSetup : DocsScreenUIEvent
+
+    data object OnSpeechModelSetupCancelled : DocsScreenUIEvent
+
     data class OnDocURLSubmitted(
         val context: Context,
         val url: String,
@@ -57,10 +64,17 @@ enum class DocDownloadState {
     DOWNLOAD_FAILURE,
 }
 
+data class SpeechModelUIState(
+    val status: String = "Chinese ASR model is not installed",
+    val isBusy: Boolean = false,
+    val isReady: Boolean = false,
+)
+
 data class DocsScreenUIState(
     val documents: List<Document> = emptyList(),
     val docDownloadState: DocDownloadState = DocDownloadState.DOWNLOAD_NONE,
     val importMessage: String? = null,
+    val speechModel: SpeechModelUIState = SpeechModelUIState(),
 )
 
 @KoinViewModel
@@ -68,15 +82,34 @@ class DocsViewModel(
     private val contentResolver: ContentResolver,
     private val documentsDB: DocumentsDB,
     private val contentIngestionUseCase: ContentIngestionUseCase,
+    private val speechModelManager: SpeechModelManager,
 ) : ViewModel() {
     private val _docsScreenUIState = MutableStateFlow(DocsScreenUIState())
     val docsScreenUIState: StateFlow<DocsScreenUIState> = _docsScreenUIState
+    private var speechModelSetupJob: Job? = null
 
     init {
         viewModelScope.launch {
             documentsDB.getAllDocuments().collect {
                 _docsScreenUIState.value = _docsScreenUIState.value.copy(documents = it)
             }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val isInstalled = speechModelManager.isModelInstalled()
+            val hasPendingSetup = speechModelManager.hasPendingSetup()
+            updateSpeechModelState(
+                SpeechModelUIState(
+                    status =
+                        if (isInstalled) {
+                            "Chinese ASR model is ready"
+                        } else if (hasPendingSetup) {
+                            "Chinese ASR model setup can be resumed"
+                        } else {
+                            "Chinese ASR model is not installed"
+                        },
+                    isReady = isInstalled,
+                ),
+            )
         }
     }
 
@@ -186,6 +219,13 @@ class DocsViewModel(
                 }
             }
 
+            DocsScreenUIEvent.OnSpeechModelSetup -> setupSpeechModel()
+
+            DocsScreenUIEvent.OnSpeechModelSetupCancelled -> {
+                speechModelManager.cancelSetup()
+                speechModelSetupJob?.cancel()
+            }
+
             is DocsScreenUIEvent.OnRemoveDoc -> {
                 documentsDB.removeDocumentAndChunks(event.docId)
             }
@@ -200,6 +240,50 @@ class DocsViewModel(
         withContext(Dispatchers.Main) {
             _docsScreenUIState.value = _docsScreenUIState.value.copy(importMessage = message)
         }
+    }
+
+    private fun setupSpeechModel() {
+        if (speechModelSetupJob?.isActive == true) return
+        speechModelSetupJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                updateSpeechModelState(
+                    SpeechModelUIState(
+                        status = "Preparing Chinese ASR model...",
+                        isBusy = true,
+                    ),
+                )
+                try {
+                    speechModelManager.ensureModel { progress ->
+                        updateSpeechModelState(
+                            SpeechModelUIState(
+                                status = progress,
+                                isBusy = true,
+                            ),
+                        )
+                    }
+                    updateSpeechModelState(
+                        SpeechModelUIState(
+                            status = "Chinese ASR model is ready",
+                            isReady = true,
+                        ),
+                    )
+                    setImportMessage("Chinese ASR model is ready for the audio POC")
+                } catch (_: CancellationException) {
+                    updateSpeechModelState(
+                        SpeechModelUIState(status = "Chinese ASR model setup was cancelled"),
+                    )
+                } catch (exception: Exception) {
+                    updateSpeechModelState(
+                        SpeechModelUIState(
+                            status = exception.message ?: "Unable to set up the Chinese ASR model",
+                        ),
+                    )
+                }
+            }
+    }
+
+    private fun updateSpeechModelState(state: SpeechModelUIState) {
+        _docsScreenUIState.value = _docsScreenUIState.value.copy(speechModel = state)
     }
 
     private fun getDocumentDisplayName(uri: Uri): String {

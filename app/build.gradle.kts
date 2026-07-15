@@ -95,6 +95,9 @@ dependencies {
     // Offline Chinese image OCR
     implementation(libs.mlkit.text.recognition.chinese)
 
+    // Offline Chinese ASR POC
+    implementation(libs.vosk.android)
+
     // ObjectBox - vector database
     debugImplementation(libs.objectbox.android.objectbrowser)
     releaseImplementation(libs.objectbox.android)

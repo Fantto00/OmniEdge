@@ -19,6 +19,7 @@ apachePoi = "5.2.5"
 koin = "3.5.6"
 koinAnnotations = "1.3.1"
 mlKitTextRecognitionChinese = "16.0.1"
+voskAndroid = "0.3.75"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,6 +41,7 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 mlkit-text-recognition-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "mlKitTextRecognitionChinese" }
+vosk-android = { module = "com.alphacephei:vosk-android", version.ref = "voskAndroid" }
 
 apache-poi = { module = "org.apache.poi:poi", version.ref = "apachePoi" }
 apache-poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "apachePoi" }
