@@ -103,32 +103,32 @@ class DocsViewModel(
             is DocsScreenUIEvent.OnDocURLSubmitted -> {
                 showProgressDialog()
                 viewModelScope.launch(Dispatchers.IO) {
+                    var connection: HttpURLConnection? = null
+                    var cachedDocument: File? = null
                     try {
-                        val connection = URL(event.url).openConnection() as HttpURLConnection
+                        connection = URL(event.url).openConnection() as HttpURLConnection
                         connection.connect()
                         if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                            val docFileName = getFileNameFromURL(event.url).ifBlank { "downloaded-document" }
+                            cachedDocument = File(event.context.cacheDir, docFileName)
+
+                            connection.inputStream.use { inputStream ->
+                                cachedDocument.outputStream().use { outputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                            }
+
+                            addChunksFromInputStream(
+                                docFileName,
+                                event.docType,
+                                cachedDocument.inputStream(),
+                            )
                             withContext(Dispatchers.Main) {
                                 _docsScreenUIState.value =
                                     _docsScreenUIState.value.copy(
                                         docDownloadState = DocDownloadState.DOWNLOAD_SUCCESS,
                                     )
                             }
-
-                            val inputStream = connection.inputStream
-                            val fileName = getFileNameFromURL(event.url)
-                            val file = File(event.context.cacheDir, fileName)
-
-                            file.outputStream().use { outputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
-
-                            // Pass file to your document handling logic
-                            val docFileName = getFileNameFromURL(event.url)
-                            addChunksFromInputStream(
-                                docFileName,
-                                event.docType,
-                                inputStream,
-                            )
                         } else {
                             withContext(Dispatchers.Main) {
                                 _docsScreenUIState.value =
@@ -145,6 +145,9 @@ class DocsViewModel(
                                     docDownloadState = DocDownloadState.DOWNLOAD_FAILURE,
                                 )
                         }
+                    } finally {
+                        connection?.disconnect()
+                        cachedDocument?.delete()
                     }
                 }
             }
@@ -161,11 +164,12 @@ class DocsViewModel(
         docType: Readers.DocumentType,
         inputStream: InputStream,
     ) {
-        val text =
+        val text = inputStream.use {
             Readers
                 .getReaderForDocType(docType)
-                .readFromInputStream(inputStream)
+                .readFromInputStream(it)
                 ?: return
+        }
         val newDocId =
             documentsDB.addDocument(
                 Document(
@@ -197,7 +201,6 @@ class DocsViewModel(
         }
         withContext(Dispatchers.IO) {
             hideProgressDialog()
-            inputStream.close()
         }
     }
 
