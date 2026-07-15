@@ -5,6 +5,7 @@ import android.content.Intent
 import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -122,7 +124,7 @@ fun DocsScreen(
                 .fillMaxWidth()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 DocsList(uiState.documents, onEvent)
-                DocOperations(uiState.docDownloadState, onEvent)
+                DocOperations(uiState, onEvent)
                 AppProgressDialog()
                 AppAlertDialog()
                 DocDetailDialog()
@@ -268,7 +270,7 @@ private fun ChooseDocTypeDialog(
 
 @Composable
 private fun DocOperations(
-    docDownloadState: DocDownloadState,
+    uiState: DocsScreenUIState,
     onEvent: (DocsScreenUIEvent) -> Unit,
 ) {
     val context = LocalContext.current
@@ -285,6 +287,20 @@ private fun DocOperations(
                 onEvent(DocsScreenUIEvent.OnDocSelected(uri, docType))
             }
         }
+
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia(),
+        ) { uri ->
+            uri?.let { onEvent(DocsScreenUIEvent.OnImageSelected(it)) }
+        }
+
+    LaunchedEffect(uiState.importMessage) {
+        uiState.importMessage?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            onEvent(DocsScreenUIEvent.OnImportMessageShown)
+        }
+    }
 
     if (showChooseDocTypeDialog) {
         ChooseDocTypeDialog(
@@ -315,6 +331,22 @@ private fun DocOperations(
             Text(text = "Add From Device", color = Color.White)
         }
 
+        Button(
+            modifier = Modifier
+                .weight(1f)
+                .padding(2.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+            onClick = {
+                imagePickerLauncher.launch(
+                    PickVisualMediaRequest(
+                        ActivityResultContracts.PickVisualMedia.ImageOnly,
+                    ),
+                )
+            },
+        ) {
+            Text(text = "Add Image", color = Color.White)
+        }
+
         // Add from URL
         Button(
             modifier = Modifier
@@ -327,7 +359,7 @@ private fun DocOperations(
         }
     }
 
-    when (docDownloadState) {
+    when (uiState.docDownloadState) {
         DocDownloadState.DOWNLOAD_NONE -> {}
         DocDownloadState.DOWNLOAD_IN_PROGRESS -> {
             showUrlDialog = false

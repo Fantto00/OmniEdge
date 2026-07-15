@@ -57,6 +57,8 @@ flowchart LR
 
 一期使用 `com.google.mlkit:text-recognition-chinese:16.0.1`，即模型随 APK 安装的离线模式。不要同时引入捆绑库与 Google Play 服务动态模型库；两者只能择一。
 
+当前实现仅使用该捆绑坐标：它不在首次识别时下载模型，但会带入 `libmlkit_google_ocr_pipeline.so`（arm64-v8a、armeabi-v7a、x86、x86_64）；APK 增量须与引入前基线比较后才能报告。当前 debug APK 为 311,607,048 bytes，尚未建立引入前的可比基线。该 SDK 的使用受 [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms) 及 Google APIs Terms of Service 约束，而不是项目可自行替换的开源模型许可证。导入时先读取图片边界并拒绝超过 16 MP 的图片，随后用 `InputImage.fromFilePath()` 识别；原图不复制到应用私有持久目录。模型升级的移除/回退方式是删除该单一依赖并重新构建 APK。
+
 选择捆绑模型的原因：
 
 - 严格离线时首次识别不能等待 Google Play 服务下载模型。

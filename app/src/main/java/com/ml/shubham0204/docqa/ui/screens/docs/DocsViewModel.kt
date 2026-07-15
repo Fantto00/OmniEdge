@@ -33,6 +33,10 @@ sealed interface DocsScreenUIEvent {
         val docType: Readers.DocumentType,
     ) : DocsScreenUIEvent
 
+    data class OnImageSelected(
+        val imageUri: Uri,
+    ) : DocsScreenUIEvent
+
     data class OnDocURLSubmitted(
         val context: Context,
         val url: String,
@@ -42,6 +46,8 @@ sealed interface DocsScreenUIEvent {
     data class OnRemoveDoc(
         val docId: Long,
     ) : DocsScreenUIEvent
+
+    data object OnImportMessageShown : DocsScreenUIEvent
 }
 
 enum class DocDownloadState {
@@ -54,6 +60,7 @@ enum class DocDownloadState {
 data class DocsScreenUIState(
     val documents: List<Document> = emptyList(),
     val docDownloadState: DocDownloadState = DocDownloadState.DOWNLOAD_NONE,
+    val importMessage: String? = null,
 )
 
 @KoinViewModel
@@ -156,9 +163,42 @@ class DocsViewModel(
                 }
             }
 
+            is DocsScreenUIEvent.OnImageSelected -> {
+                showProgressDialog()
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        contentIngestionUseCase.ingestImage(
+                            ContentSource.Image(
+                                uri = event.imageUri,
+                                displayName = getDocumentDisplayName(event.imageUri),
+                                mimeType = contentResolver.getType(event.imageUri),
+                            ),
+                            ::setProgressDialogText,
+                        )
+                        setImportMessage("Image text added to the knowledge base")
+                    } catch (exception: Exception) {
+                        setImportMessage(exception.message ?: "Unable to recognize text in the selected image")
+                    } finally {
+                        withContext(Dispatchers.Main) {
+                            hideProgressDialog()
+                        }
+                    }
+                }
+            }
+
             is DocsScreenUIEvent.OnRemoveDoc -> {
                 documentsDB.removeDocumentAndChunks(event.docId)
             }
+
+            DocsScreenUIEvent.OnImportMessageShown -> {
+                _docsScreenUIState.value = _docsScreenUIState.value.copy(importMessage = null)
+            }
+        }
+    }
+
+    private suspend fun setImportMessage(message: String) {
+        withContext(Dispatchers.Main) {
+            _docsScreenUIState.value = _docsScreenUIState.value.copy(importMessage = message)
         }
     }
 

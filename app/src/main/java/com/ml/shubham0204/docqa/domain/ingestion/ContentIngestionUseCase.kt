@@ -15,16 +15,36 @@ class ContentIngestionUseCase(
     private val contentResolver: ContentResolver,
     private val documentsDB: DocumentsDB,
     private val sentenceEncoder: SentenceEmbeddingProvider,
+    private val imageOcrExtractor: ImageOcrExtractor,
 ) {
     suspend fun ingestDocument(
         source: ContentSource.Document,
         onProgress: (String) -> Unit = {},
     ): IngestionResult {
         val extractionResult = extractDocument(source)
+        return indexExtraction(source, extractionResult, onProgress)
+    }
+
+    suspend fun ingestImage(
+        source: ContentSource.Image,
+        onProgress: (String) -> Unit = {},
+    ): IngestionResult {
+        onProgress("Recognizing image text...")
+        return indexExtraction(source, imageOcrExtractor.extract(source), onProgress)
+    }
+
+    private fun indexExtraction(
+        source: ContentSource,
+        extractionResult: ExtractionResult,
+        onProgress: (String) -> Unit,
+    ): IngestionResult {
+        val indexableText = requireNotNull(extractionResult.text.takeIf(String::isNotBlank)) {
+            "No text was extracted from ${source.displayName}"
+        }
         onProgress("Creating chunks...")
         val textChunks =
             WhiteSpaceSplitter.createChunks(
-                extractionResult.text,
+                indexableText,
                 chunkSize = 500,
                 chunkOverlap = 50,
             ).filter(String::isNotBlank)
@@ -46,13 +66,13 @@ class ContentIngestionUseCase(
             documentsDB.addDocumentAndChunks(
                 document =
                     Document(
-                        docText = extractionResult.text,
+                        docText = indexableText,
                         docFileName = source.displayName,
                         docAddedTime = System.currentTimeMillis(),
                         sourceType = extractionResult.sourceType.name,
                         sourceMimeType = extractionResult.mimeType.orEmpty(),
                         sourceUri = source.sourceUri,
-                        contentHash = extractionResult.text.sha256(),
+                        contentHash = indexableText.sha256(),
                         extractorVersion = extractionResult.extractorVersion,
                         embeddingModelVersion = EMBEDDING_MODEL_VERSION,
                     ),

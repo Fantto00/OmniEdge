@@ -92,6 +92,9 @@ dependencies {
     // iTextPDF - for parsing PDFs
     implementation(libs.itextpdf)
 
+    // Offline Chinese image OCR
+    implementation(libs.mlkit.text.recognition.chinese)
+
     // ObjectBox - vector database
     debugImplementation(libs.objectbox.android.objectbrowser)
     releaseImplementation(libs.objectbox.android)
