@@ -16,12 +16,24 @@ class ContentIngestionUseCase(
     private val documentsDB: DocumentsDB,
     private val sentenceEncoder: SentenceEmbeddingProvider,
     private val imageOcrExtractor: ImageOcrExtractor,
+    private val scannedPdfOcrExtractor: ScannedPdfOcrExtractor,
 ) {
     suspend fun ingestDocument(
         source: ContentSource.Document,
         onProgress: (String) -> Unit = {},
     ): IngestionResult {
-        val extractionResult = extractDocument(source)
+        onProgress("Extracting document text...")
+        val primaryExtraction = extractDocument(source)
+        val extractionResult =
+            if (
+                source.documentType == Readers.DocumentType.PDF &&
+                ScannedPdfOcrLimits.shouldUseOcr(primaryExtraction.text)
+            ) {
+                onProgress("No embedded PDF text found. Starting OCR...")
+                scannedPdfOcrExtractor.extract(source, onProgress)
+            } else {
+                primaryExtraction
+            }
         return indexExtraction(source, extractionResult, onProgress)
     }
 
@@ -74,6 +86,7 @@ class ContentIngestionUseCase(
                         sourceUri = source.sourceUri,
                         contentHash = indexableText.sha256(),
                         extractorVersion = extractionResult.extractorVersion,
+                        extractionMetadata = extractionResult.extractionMetadata,
                         embeddingModelVersion = EMBEDDING_MODEL_VERSION,
                     ),
                 chunks = chunks,
@@ -86,16 +99,13 @@ class ContentIngestionUseCase(
             requireNotNull(contentResolver.openInputStream(source.uri)) {
                 "Unable to open ${source.displayName}"
             }.use { inputStream ->
-                requireNotNull(
-                    Readers
-                        .getReaderForDocType(source.documentType)
-                        .readFromInputStream(inputStream),
-                ) { "Unable to extract text from ${source.displayName}" }
+                Readers
+                    .getReaderForDocType(source.documentType)
+                    .readFromInputStream(inputStream)
+                    .orEmpty()
             }
         return ExtractionResult(
-            text = requireNotNull(text.takeIf(String::isNotBlank)) {
-                "No text was extracted from ${source.displayName}"
-            },
+            text = text,
             sourceType = source.sourceType,
             mimeType = source.mimeType,
             extractorId = "reader/${source.documentType.name.lowercase()}",

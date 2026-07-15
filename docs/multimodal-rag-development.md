@@ -69,6 +69,8 @@ flowchart LR
 
 扫描型 PDF 不是普通 PDF 文本提取的替代品。处理顺序应为：先使用既有 `PDFReader` 提取文本；只有文本为空或低于阈值时，才通过 `PdfRenderer` 逐页渲染并调用 OCR。该流程应设置页数、最长边和总像素上限，并在来源元数据中记录哪些页面经过 OCR。
 
+当前回退实现的阈值为：嵌入文本少于 80 个字符时启动 OCR，最多 10 页，页面渲染最长边 2,048 px，总渲染上限 40 MP，任务上限为 60 秒。它使用 Android 平台 `PdfRenderer`，不增加依赖、权限或额外 ABI；成功导入会在 `Document.extractionMetadata` 中记录 OCR 页码范围，超限、超时或识别失败时不写入 Document/Chunk。
+
 ### 3.2 文件访问：使用系统选择器，不申请广泛媒体权限
 
 - 图片：使用 `ActivityResultContracts.PickVisualMedia(ImageOnly)`；其不可用时 AndroidX 会回退到 `ACTION_OPEN_DOCUMENT`。

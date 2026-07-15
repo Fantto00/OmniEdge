@@ -21,19 +21,23 @@ class ImageOcrExtractor(
 ) {
     suspend fun extract(source: ContentSource.Image): ExtractionResult {
         validateImageDimensions(source)
+        val text = recognize(InputImage.fromFilePath(context, source.uri))
+        return ExtractionResult(
+            text = text,
+            sourceType = source.sourceType,
+            mimeType = source.mimeType,
+            extractorId = EXTRACTOR_ID,
+            extractorVersion = EXTRACTOR_VERSION,
+        )
+    }
+
+    suspend fun recognize(inputImage: InputImage): String {
         val recognizer =
             TextRecognition.getClient(
                 ChineseTextRecognizerOptions.Builder().build(),
             )
         return try {
-            val text = recognizer.process(InputImage.fromFilePath(context, source.uri)).awaitText()
-            ExtractionResult(
-                text = text,
-                sourceType = source.sourceType,
-                mimeType = source.mimeType,
-                extractorId = EXTRACTOR_ID,
-                extractorVersion = EXTRACTOR_VERSION,
-            )
+            recognizer.process(inputImage).awaitText()
         } finally {
             recognizer.close()
         }

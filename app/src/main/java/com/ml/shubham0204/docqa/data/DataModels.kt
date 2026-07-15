@@ -25,6 +25,7 @@ data class Document(
     var sourceUri: String = "",
     var contentHash: String = "",
     var extractorVersion: String = "",
+    var extractionMetadata: String = "",
     var embeddingModelVersion: String = "",
 )
 

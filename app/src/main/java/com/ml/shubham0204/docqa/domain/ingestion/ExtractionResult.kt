@@ -6,6 +6,7 @@ data class ExtractionResult(
     val mimeType: String?,
     val extractorId: String,
     val extractorVersion: String,
+    val extractionMetadata: String = "",
 )
 
 data class IngestionResult(

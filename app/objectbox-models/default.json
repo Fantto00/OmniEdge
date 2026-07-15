@@ -43,7 +43,7 @@
     },
     {
       "id": "2:1370145163078906664",
-      "lastPropertyId": "10:5590566303020483783",
+      "lastPropertyId": "11:8881778718873228295",
       "name": "Document",
       "properties": [
         {
@@ -95,6 +95,11 @@
         {
           "id": "10:5590566303020483783",
           "name": "embeddingModelVersion",
+          "type": 9
+        },
+        {
+          "id": "11:8881778718873228295",
+          "name": "extractionMetadata",
           "type": 9
         }
       ],
