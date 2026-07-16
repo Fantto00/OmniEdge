@@ -302,6 +302,24 @@ private fun DocOperations(
             uri?.let { onEvent(DocsScreenUIEvent.OnAudioSelected(it)) }
         }
 
+    val audioImportLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            uri?.let { audioUri ->
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(
+                        audioUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                }.onSuccess {
+                    onEvent(DocsScreenUIEvent.OnAudioImportSelected(audioUri))
+                }.onFailure {
+                    Toast.makeText(context, "Unable to retain access to the selected audio", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
     LaunchedEffect(uiState.importMessage) {
         uiState.importMessage?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -411,7 +429,10 @@ private fun DocOperations(
             modifier = Modifier.padding(top = 4.dp),
         ) {
             Button(
-                enabled = uiState.speechModel.isReady && !uiState.audioPoc.isBusy,
+                enabled =
+                    uiState.speechModel.isReady &&
+                        !uiState.audioPoc.isBusy &&
+                        !uiState.audioImport.isBusy,
                 onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) },
             ) {
                 Text(text = "Run Audio ASR POC")
@@ -434,6 +455,35 @@ private fun DocOperations(
                 color = Color.DarkGray,
                 maxLines = 4,
             )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = uiState.audioImport.status,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.DarkGray,
+        )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Button(
+                enabled =
+                    uiState.speechModel.isReady &&
+                        !uiState.audioPoc.isBusy &&
+                        !uiState.audioImport.isBusy,
+                onClick = { audioImportLauncher.launch(arrayOf("audio/*")) },
+            ) {
+                Text(text = "Add Audio to Knowledge Base")
+            }
+            if (uiState.audioImport.isBusy) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)),
+                    onClick = { onEvent(DocsScreenUIEvent.OnAudioImportCancelled) },
+                ) {
+                    Text(text = "Cancel Import")
+                }
+            }
         }
     }
 

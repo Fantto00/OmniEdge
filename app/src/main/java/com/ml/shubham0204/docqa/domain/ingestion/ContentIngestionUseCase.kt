@@ -6,7 +6,10 @@ import com.ml.shubham0204.docqa.data.Document
 import com.ml.shubham0204.docqa.data.DocumentsDB
 import com.ml.shubham0204.docqa.domain.SentenceEmbeddingProvider
 import com.ml.shubham0204.docqa.domain.WhiteSpaceSplitter
+import com.ml.shubham0204.docqa.domain.asr.VoskTranscriber
 import com.ml.shubham0204.docqa.domain.readers.Readers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import org.koin.core.annotation.Single
 import java.security.MessageDigest
 
@@ -17,6 +20,7 @@ class ContentIngestionUseCase(
     private val sentenceEncoder: SentenceEmbeddingProvider,
     private val imageOcrExtractor: ImageOcrExtractor,
     private val scannedPdfOcrExtractor: ScannedPdfOcrExtractor,
+    private val voskTranscriber: VoskTranscriber,
 ) {
     suspend fun ingestDocument(
         source: ContentSource.Document,
@@ -45,11 +49,36 @@ class ContentIngestionUseCase(
         return indexExtraction(source, imageOcrExtractor.extract(source), onProgress)
     }
 
-    private fun indexExtraction(
+    suspend fun ingestAudio(
+        source: ContentSource.Audio,
+        onProgress: (String) -> Unit = {},
+    ): IngestionResult {
+        onProgress("Transcribing audio offline...")
+        val transcription = voskTranscriber.transcribe(source, onProgress)
+        val indexableText = AudioTranscriptNormalizer.normalizeForIndexing(transcription.text)
+        return indexExtraction(
+            source = source,
+            extractionResult =
+                ExtractionResult(
+                    text = indexableText,
+                    sourceType = source.sourceType,
+                    mimeType = transcription.mimeType,
+                    extractorId = "vosk/chinese-small",
+                    extractorVersion = "0.3.75+vosk-model-small-cn-0.22",
+                    extractionMetadata =
+                        "audioDurationMs=${transcription.audioDurationMs};" +
+                            "processingDurationMs=${transcription.processingDurationMs}",
+                ),
+            onProgress = onProgress,
+        )
+    }
+
+    private suspend fun indexExtraction(
         source: ContentSource,
         extractionResult: ExtractionResult,
         onProgress: (String) -> Unit,
     ): IngestionResult {
+        currentCoroutineContext().ensureActive()
         val indexableText = requireNotNull(extractionResult.text.takeIf(String::isNotBlank)) {
             "No text was extracted from ${source.displayName}"
         }
@@ -66,6 +95,7 @@ class ContentIngestionUseCase(
         onProgress("Creating embeddings...")
         val chunks =
             textChunks.mapIndexed { index, textChunk ->
+                currentCoroutineContext().ensureActive()
                 onProgress("Creating embedding ${index + 1}/${textChunks.size}...")
                 Chunk(
                     docFileName = source.displayName,
@@ -74,6 +104,7 @@ class ContentIngestionUseCase(
                 )
             }
         onProgress("Saving document...")
+        currentCoroutineContext().ensureActive()
         val documentId =
             documentsDB.addDocumentAndChunks(
                 document =

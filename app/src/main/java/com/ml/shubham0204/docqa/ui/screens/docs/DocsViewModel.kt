@@ -45,11 +45,17 @@ sealed interface DocsScreenUIEvent {
         val audioUri: Uri,
     ) : DocsScreenUIEvent
 
+    data class OnAudioImportSelected(
+        val audioUri: Uri,
+    ) : DocsScreenUIEvent
+
     data object OnSpeechModelSetup : DocsScreenUIEvent
 
     data object OnSpeechModelSetupCancelled : DocsScreenUIEvent
 
     data object OnAudioPocCancelled : DocsScreenUIEvent
+
+    data object OnAudioImportCancelled : DocsScreenUIEvent
 
     data class OnDocURLSubmitted(
         val context: Context,
@@ -83,12 +89,18 @@ data class AudioPocUIState(
     val transcript: String? = null,
 )
 
+data class AudioImportUIState(
+    val status: String = "Select audio to add its offline transcription to the knowledge base",
+    val isBusy: Boolean = false,
+)
+
 data class DocsScreenUIState(
     val documents: List<Document> = emptyList(),
     val docDownloadState: DocDownloadState = DocDownloadState.DOWNLOAD_NONE,
     val importMessage: String? = null,
     val speechModel: SpeechModelUIState = SpeechModelUIState(),
     val audioPoc: AudioPocUIState = AudioPocUIState(),
+    val audioImport: AudioImportUIState = AudioImportUIState(),
 )
 
 @KoinViewModel
@@ -103,6 +115,7 @@ class DocsViewModel(
     val docsScreenUIState: StateFlow<DocsScreenUIState> = _docsScreenUIState
     private var speechModelSetupJob: Job? = null
     private var audioPocJob: Job? = null
+    private var audioImportJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -237,6 +250,8 @@ class DocsViewModel(
 
             is DocsScreenUIEvent.OnAudioSelected -> runAudioPoc(event.audioUri)
 
+            is DocsScreenUIEvent.OnAudioImportSelected -> importAudio(event.audioUri)
+
             DocsScreenUIEvent.OnSpeechModelSetup -> setupSpeechModel()
 
             DocsScreenUIEvent.OnSpeechModelSetupCancelled -> {
@@ -245,6 +260,8 @@ class DocsViewModel(
             }
 
             DocsScreenUIEvent.OnAudioPocCancelled -> audioPocJob?.cancel()
+
+            DocsScreenUIEvent.OnAudioImportCancelled -> audioImportJob?.cancel()
 
             is DocsScreenUIEvent.OnRemoveDoc -> {
                 documentsDB.removeDocumentAndChunks(event.docId)
@@ -354,6 +371,61 @@ class DocsViewModel(
 
     private fun updateAudioPocState(state: AudioPocUIState) {
         _docsScreenUIState.value = _docsScreenUIState.value.copy(audioPoc = state)
+    }
+
+    private fun importAudio(audioUri: Uri) {
+        if (audioImportJob?.isActive == true) return
+        audioImportJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                if (!speechModelManager.isModelInstalled()) {
+                    updateAudioImportState(
+                        AudioImportUIState(
+                            status = "Set up the Chinese ASR model before importing audio.",
+                        ),
+                    )
+                    return@launch
+                }
+                updateAudioImportState(
+                    AudioImportUIState(
+                        status = "Preparing audio for offline transcription...",
+                        isBusy = true,
+                    ),
+                )
+                try {
+                    val result =
+                        contentIngestionUseCase.ingestAudio(
+                            source =
+                                ContentSource.Audio(
+                                    uri = audioUri,
+                                    displayName = getDocumentDisplayName(audioUri),
+                                    mimeType = contentResolver.getType(audioUri),
+                                ),
+                            onProgress = { progress ->
+                                updateAudioImportState(
+                                    AudioImportUIState(status = progress, isBusy = true),
+                                )
+                            },
+                        )
+                    updateAudioImportState(
+                        AudioImportUIState(
+                            status = "Audio added to the knowledge base (${result.chunkCount} chunks).",
+                        ),
+                    )
+                    setImportMessage("Audio transcription added to the knowledge base")
+                } catch (_: CancellationException) {
+                    updateAudioImportState(AudioImportUIState(status = "Audio import was cancelled."))
+                } catch (exception: Exception) {
+                    updateAudioImportState(
+                        AudioImportUIState(
+                            status = exception.message ?: "Unable to add the selected audio.",
+                        ),
+                    )
+                }
+            }
+    }
+
+    private fun updateAudioImportState(state: AudioImportUIState) {
+        _docsScreenUIState.value = _docsScreenUIState.value.copy(audioImport = state)
     }
 
     private fun getDocumentDisplayName(uri: Uri): String {
