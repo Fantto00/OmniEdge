@@ -196,6 +196,11 @@ private fun DocsListItem(
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.DarkGray,
             )
+            Text(
+                text = "${DocumentSourcePresentation.label(document.sourceType)} · Indexed",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.DarkGray,
+            )
         }
         Icon(
             modifier =
