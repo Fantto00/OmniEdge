@@ -70,6 +70,8 @@ class SpeechModelManager(
 
     fun isModelInstalled(): Boolean = isInstalled(modelDirectory())
 
+    fun installedModelDirectory(): File? = modelDirectory().takeIf(::isInstalled)
+
     fun hasPendingSetup(): Boolean = pendingDownloadId() != null
 
     fun cancelSetup() {

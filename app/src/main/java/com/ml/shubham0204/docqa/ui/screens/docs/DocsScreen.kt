@@ -295,6 +295,13 @@ private fun DocOperations(
             uri?.let { onEvent(DocsScreenUIEvent.OnImageSelected(it)) }
         }
 
+    val audioPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            uri?.let { onEvent(DocsScreenUIEvent.OnAudioSelected(it)) }
+        }
+
     LaunchedEffect(uiState.importMessage) {
         uiState.importMessage?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -392,6 +399,41 @@ private fun DocOperations(
                     Text(text = "Cancel Setup")
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = uiState.audioPoc.status,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.DarkGray,
+        )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Button(
+                enabled = uiState.speechModel.isReady && !uiState.audioPoc.isBusy,
+                onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) },
+            ) {
+                Text(text = "Run Audio ASR POC")
+            }
+            if (uiState.audioPoc.isBusy) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)),
+                    onClick = { onEvent(DocsScreenUIEvent.OnAudioPocCancelled) },
+                ) {
+                    Text(text = "Cancel POC")
+                }
+            }
+        }
+        uiState.audioPoc.transcript?.let { transcript ->
+            Text(
+                text = "POC transcript: $transcript",
+                modifier = Modifier.padding(top = 4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray,
+                maxLines = 4,
+            )
         }
     }
 

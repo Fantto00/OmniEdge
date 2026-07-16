@@ -83,6 +83,8 @@ flowchart LR
 
 当前 POC 固定使用 `com.alphacephei:vosk-android:0.3.75`（Apache-2.0）和 `vosk-model-small-cn-0.22`（Apache-2.0）。模型不打入 APK，也不会在应用启动时下载；用户必须在文档页主动选择“Set Up Chinese ASR”。项目既有 Ketch（基于 WorkManager）负责可恢复下载、进度和取消；下载使用官方 HTTPS 地址，临时 ZIP 位于 `cacheDir`，写入前会校验大小和固定 SHA-256，解压时拒绝 Zip Slip 路径、限制展开大小，模型经 Vosk 加载验证后才原子移动到 `noBackupFilesDir`。取消、失败或校验不通过会清理临时文件，用户可再次触发重试。该切片只完成模型生命周期 POC，尚未接入音频选择、平台解码、转写或知识库写入；它们必须在真机资源和质量指标通过后继续。
 
+后续的音频 POC 使用 SAF `OpenDocument` 选择单个音频 URI，不申请广泛媒体权限，也不会持久化原始音频。它仅通过 Android `MediaExtractor` 和 `MediaCodec` 流式解码，归一化为 16 kHz、单声道、16-bit little-endian PCM，再交给 Vosk；当前限制为最长 5 分钟，取消时释放解码器和识别器。转写文本、检测到的 MIME、音频时长与处理耗时只显示在页面上，不写入 ObjectBox。MP3、M4A/AAC、WAV 是否可用仍必须按具体设备和文件进行真实 POC 记录；在质量闸门通过前，这不是正式音频导入能力。
+
 Vosk 运行时会引入原生 `libvosk.so`（`arm64-v8a`、`armeabi-v7a`、`x86`、`x86_64`）以及 JNA 的 `libjnidispatch.so`；当前 debug APK 为 352,535,673 bytes。相对图片 OCR 阶段记录的 311,607,048 bytes 调试包，此受控变更增加 40,928,625 bytes；该数值只用于当前构建配置的回归基线。移除方式是删除 `vosk-android` 依赖和本 POC 源码；已下载模型则位于应用的 `noBackupFilesDir`，清除应用数据即可移除。
 
 `vosk-model-small-cn-0.22` 的官方清单大小约 42 MB，适合移动端试验；但小模型通常约需 300 MB 运行时内存，且官方列出的中文基准词错率在不同集上约为 17% 到 38%。因此它只能作为“短中文音频、可接受中等精度”的一期候选，不能把“中文精度够用”写成既定事实。

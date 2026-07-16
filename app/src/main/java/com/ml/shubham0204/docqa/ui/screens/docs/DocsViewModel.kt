@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.ml.shubham0204.docqa.data.Document
 import com.ml.shubham0204.docqa.data.DocumentsDB
 import com.ml.shubham0204.docqa.domain.asr.SpeechModelManager
+import com.ml.shubham0204.docqa.domain.asr.VoskTranscriber
 import com.ml.shubham0204.docqa.domain.ingestion.ContentIngestionUseCase
 import com.ml.shubham0204.docqa.domain.ingestion.ContentSource
 import com.ml.shubham0204.docqa.domain.readers.Readers
@@ -40,9 +41,15 @@ sealed interface DocsScreenUIEvent {
         val imageUri: Uri,
     ) : DocsScreenUIEvent
 
+    data class OnAudioSelected(
+        val audioUri: Uri,
+    ) : DocsScreenUIEvent
+
     data object OnSpeechModelSetup : DocsScreenUIEvent
 
     data object OnSpeechModelSetupCancelled : DocsScreenUIEvent
+
+    data object OnAudioPocCancelled : DocsScreenUIEvent
 
     data class OnDocURLSubmitted(
         val context: Context,
@@ -70,11 +77,18 @@ data class SpeechModelUIState(
     val isReady: Boolean = false,
 )
 
+data class AudioPocUIState(
+    val status: String = "Select an audio file to run the offline ASR POC",
+    val isBusy: Boolean = false,
+    val transcript: String? = null,
+)
+
 data class DocsScreenUIState(
     val documents: List<Document> = emptyList(),
     val docDownloadState: DocDownloadState = DocDownloadState.DOWNLOAD_NONE,
     val importMessage: String? = null,
     val speechModel: SpeechModelUIState = SpeechModelUIState(),
+    val audioPoc: AudioPocUIState = AudioPocUIState(),
 )
 
 @KoinViewModel
@@ -83,10 +97,12 @@ class DocsViewModel(
     private val documentsDB: DocumentsDB,
     private val contentIngestionUseCase: ContentIngestionUseCase,
     private val speechModelManager: SpeechModelManager,
+    private val voskTranscriber: VoskTranscriber,
 ) : ViewModel() {
     private val _docsScreenUIState = MutableStateFlow(DocsScreenUIState())
     val docsScreenUIState: StateFlow<DocsScreenUIState> = _docsScreenUIState
     private var speechModelSetupJob: Job? = null
+    private var audioPocJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -219,12 +235,16 @@ class DocsViewModel(
                 }
             }
 
+            is DocsScreenUIEvent.OnAudioSelected -> runAudioPoc(event.audioUri)
+
             DocsScreenUIEvent.OnSpeechModelSetup -> setupSpeechModel()
 
             DocsScreenUIEvent.OnSpeechModelSetupCancelled -> {
                 speechModelManager.cancelSetup()
                 speechModelSetupJob?.cancel()
             }
+
+            DocsScreenUIEvent.OnAudioPocCancelled -> audioPocJob?.cancel()
 
             is DocsScreenUIEvent.OnRemoveDoc -> {
                 documentsDB.removeDocumentAndChunks(event.docId)
@@ -284,6 +304,56 @@ class DocsViewModel(
 
     private fun updateSpeechModelState(state: SpeechModelUIState) {
         _docsScreenUIState.value = _docsScreenUIState.value.copy(speechModel = state)
+    }
+
+    private fun runAudioPoc(audioUri: Uri) {
+        if (audioPocJob?.isActive == true) return
+        audioPocJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                if (!speechModelManager.isModelInstalled()) {
+                    updateAudioPocState(
+                        AudioPocUIState(
+                            status = "Set up the Chinese ASR model before selecting audio.",
+                        ),
+                    )
+                    return@launch
+                }
+                updateAudioPocState(AudioPocUIState(status = "Opening audio for offline transcription...", isBusy = true))
+                try {
+                    val result =
+                        voskTranscriber.transcribe(
+                            source =
+                                ContentSource.Audio(
+                                    uri = audioUri,
+                                    displayName = getDocumentDisplayName(audioUri),
+                                    mimeType = contentResolver.getType(audioUri),
+                                ),
+                            onProgress = { progress ->
+                                updateAudioPocState(AudioPocUIState(status = progress, isBusy = true))
+                            },
+                        )
+                    updateAudioPocState(
+                        AudioPocUIState(
+                            status =
+                                "POC completed: ${result.mimeType}, ${result.audioDurationMs / 1_000}s audio, " +
+                                    "${result.processingDurationMs / 1_000.0}s processing. Not indexed.",
+                            transcript = result.text.ifBlank { "No speech detected." },
+                        ),
+                    )
+                } catch (_: CancellationException) {
+                    updateAudioPocState(AudioPocUIState(status = "Audio transcription POC was cancelled."))
+                } catch (exception: Exception) {
+                    updateAudioPocState(
+                        AudioPocUIState(
+                            status = exception.message ?: "Unable to transcribe the selected audio.",
+                        ),
+                    )
+                }
+            }
+    }
+
+    private fun updateAudioPocState(state: AudioPocUIState) {
+        _docsScreenUIState.value = _docsScreenUIState.value.copy(audioPoc = state)
     }
 
     private fun getDocumentDisplayName(uri: Uri): String {
