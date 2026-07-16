@@ -34,8 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.ui.theme.DocQATheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -49,7 +51,7 @@ fun EditCredentialsScreen(onBackClick: () -> Unit) {
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Edit Credentials",
+                            text = stringResource(R.string.screen_credentials_title),
                             style = MaterialTheme.typography.headlineSmall,
                         )
                     },
@@ -57,7 +59,7 @@ fun EditCredentialsScreen(onBackClick: () -> Unit) {
                         IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Navigate Back",
+                                contentDescription = stringResource(R.string.a11y_navigate_back),
                             )
                         }
                     },
@@ -102,17 +104,17 @@ private fun GeminiAPIKey(viewModel: EditCredentialsViewModel) {
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
             ),
-        placeholder = { Text(text = "Enter Gemini API key...") },
+        placeholder = { Text(text = stringResource(R.string.input_gemini_api_key)) },
     )
     Button(
         enabled = geminiApiKey.isNotBlank(),
         onClick = {
             viewModel.saveGeminiAPIKey(geminiApiKey)
-            Toast.makeText(context, "API key saved", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.status_api_key_saved), Toast.LENGTH_LONG).show()
         },
     ) {
-        Icon(imageVector = Icons.Default.Save, contentDescription = "Save API key")
-        Text(text = "Save API Key")
+        Icon(imageVector = Icons.Default.Save, contentDescription = stringResource(R.string.action_save_api_key))
+        Text(text = stringResource(R.string.action_save_api_key))
     }
 }
 
@@ -136,17 +138,17 @@ private fun HFAccessToken(viewModel: EditCredentialsViewModel) {
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
             ),
-        placeholder = { Text(text = "Enter HuggingFace access token...") },
+        placeholder = { Text(text = stringResource(R.string.input_hf_access_token)) },
     )
     Button(
         enabled = hfAccessToken.isNotBlank(),
         onClick = {
             viewModel.saveHFAccessToken(hfAccessToken)
-            Toast.makeText(context, "HF Access token saved", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.status_hf_token_saved), Toast.LENGTH_LONG).show()
         },
     ) {
-        Icon(imageVector = Icons.Default.Save, contentDescription = "Save HF Access Token")
-        Text(text = "Save HF Access Token")
+        Icon(imageVector = Icons.Default.Save, contentDescription = stringResource(R.string.action_save_hf_token))
+        Text(text = stringResource(R.string.action_save_hf_token))
     }
 }
 

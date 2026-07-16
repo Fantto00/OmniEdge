@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,7 +68,7 @@ fun ChatScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Chat",
+                            text = stringResource(R.string.screen_chat_title),
                             style = MaterialTheme.typography.headlineSmall,
                         )
                     },
@@ -79,7 +80,7 @@ fun ChatScreen(
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Options",
+                                    contentDescription = stringResource(R.string.a11y_more_options),
                                 )
                             }
                             ChatScreenMoreOptionsPopup(
@@ -135,7 +136,7 @@ private fun ColumnScope.QALayout(screenUiState: ChatScreenUIState) {
                     tint = Color.LightGray,
                 )
                 Text(
-                    text = "Enter a query to see answers",
+                    text = stringResource(R.string.screen_chat_empty),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.LightGray,
                 )
@@ -189,14 +190,17 @@ private fun ColumnScope.QALayout(screenUiState: ChatScreenUIState) {
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Share,
-                                        contentDescription = "Share the response",
+                                        contentDescription = stringResource(R.string.action_share_response),
                                         tint = Color.Black,
                                     )
                                 }
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Context", style = MaterialTheme.typography.headlineSmall)
+                        Text(
+                            text = stringResource(R.string.screen_chat_context),
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
@@ -253,7 +257,7 @@ private fun QueryInput(onEvent: (ChatScreenUIEvent) -> Unit) {
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent,
                 ),
-            placeholder = { Text(text = "Ask documents...") },
+            placeholder = { Text(text = stringResource(R.string.screen_chat_input_hint)) },
         )
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(
@@ -268,11 +272,11 @@ private fun QueryInput(onEvent: (ChatScreenUIEvent) -> Unit) {
                             context.getString(R.string.prompt_1),
                         ),
                     )
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     createAlertDialog(
-                        dialogTitle = "Error",
-                        dialogText = "An error occurred while generating the response: ${e.message}",
-                        dialogPositiveButtonText = "Close",
+                        dialogTitle = context.getString(R.string.dialog_error_title),
+                        dialogText = context.getString(R.string.error_response_generation),
+                        dialogPositiveButtonText = context.getString(R.string.action_close),
                         onPositiveButtonClick = {},
                         dialogNegativeButtonText = null,
                         onNegativeButtonClick = {},
@@ -282,7 +286,7 @@ private fun QueryInput(onEvent: (ChatScreenUIEvent) -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Send query",
+                contentDescription = stringResource(R.string.action_send_query),
                 tint = Color.White,
             )
         }

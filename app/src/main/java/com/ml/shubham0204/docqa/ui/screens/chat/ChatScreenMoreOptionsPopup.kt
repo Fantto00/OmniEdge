@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import com.ml.shubham0204.docqa.R
 
 @Composable
 fun ChatScreenMoreOptionsPopup(
@@ -23,7 +25,7 @@ fun ChatScreenMoreOptionsPopup(
         onDismissRequest = onDismissRequest,
     ) {
         OptionsPopupItem(
-            title = "Edit Credentials",
+            title = stringResource(R.string.screen_credentials_title),
             icon = Icons.Default.Key,
             onItemClick = {
                 onItemClick(ChatScreenUIEvent.OnEditCredentialsClick)
@@ -31,7 +33,7 @@ fun ChatScreenMoreOptionsPopup(
             },
         )
         OptionsPopupItem(
-            title = "Manage Local Models",
+            title = stringResource(R.string.screen_models_title),
             icon = Icons.Default.Download,
             onItemClick = {
                 onItemClick(ChatScreenUIEvent.OnLocalModelsClick)
@@ -39,7 +41,7 @@ fun ChatScreenMoreOptionsPopup(
             },
         )
         OptionsPopupItem(
-            title = "Manage Documents",
+            title = stringResource(R.string.screen_docs_title),
             icon = Icons.Default.FolderOpen,
             onItemClick = {
                 onItemClick(ChatScreenUIEvent.OnOpenDocsClick)

@@ -1,7 +1,93 @@
 <resources>
-    <string name="app_name">Doc-QA</string>
+    <string name="app_name">OmniEdge</string>
 
-    <string name="prompt_1">
+    <string name="screen_chat_title">智能问答</string>
+    <string name="screen_chat_empty">导入资料后，即可向知识库提问</string>
+    <string name="screen_chat_input_hint">向知识库提问…</string>
+    <string name="screen_chat_context">参考资料</string>
+    <string name="screen_chat_response">回答</string>
+    <string name="screen_chat_using_local_model">正在使用本地模型…</string>
+    <string name="screen_chat_using_gemini">正在使用 Gemini 云端模型…</string>
+    <string name="screen_chat_add_documents">请先导入资料再提问</string>
+    <string name="screen_chat_enter_query">请输入问题</string>
+    <string name="dialog_invalid_api_key_title">API 密钥无效</string>
+    <string name="dialog_invalid_api_key_message">请输入 Gemini API 密钥后再生成回答。</string>
+    <string name="dialog_error_title">发生错误</string>
+    <string name="error_response_generation">暂时无法生成回答，请稍后重试。</string>
+    <string name="action_add_api_key">添加 API 密钥</string>
+    <string name="action_open_gemini_console">打开 Gemini 控制台</string>
+
+    <string name="screen_docs_title">知识库</string>
+    <string name="document_source_document">文档</string>
+    <string name="document_source_image">图片 OCR</string>
+    <string name="document_source_audio">音频转写</string>
+    <string name="document_indexed">%1$s · 已建立索引</string>
+    <string name="dialog_remove_document_title">删除资料</string>
+    <string name="dialog_remove_document_message">确定从知识库中删除此资料吗？删除后，后续问答将不再引用其内容。</string>
+    <string name="dialog_choose_document_type">选择文档类型</string>
+    <string name="document_type_pdf">PDF</string>
+    <string name="document_type_word">Word 文档（DOCX）</string>
+    <string name="document_type_plain_text">纯文本</string>
+    <string name="document_type_markdown">Markdown</string>
+    <string name="action_add_from_device">从设备导入</string>
+    <string name="action_add_image">导入图片</string>
+    <string name="action_add_from_url">通过链接导入</string>
+    <string name="status_asr_model_ready">语音识别模型已就绪</string>
+    <string name="action_setup_chinese_asr">配置中文语音识别</string>
+    <string name="action_cancel_setup">取消配置</string>
+    <string name="action_run_audio_poc">运行离线转写测试</string>
+    <string name="action_cancel_poc">取消测试</string>
+    <string name="audio_poc_transcript">测试转写结果：%1$s</string>
+    <string name="action_add_audio">将音频加入知识库</string>
+    <string name="action_cancel_import">取消导入</string>
+    <string name="status_document_added_from_url">已通过链接导入资料</string>
+    <string name="error_document_download">下载失败，请检查链接后重试。</string>
+    <string name="dialog_add_document_from_url">通过链接导入资料</string>
+    <string name="dialog_add_document_from_url_hint">应用将根据下载文件的扩展名识别文档类型。</string>
+    <string name="input_url">请输入链接</string>
+    <string name="action_add">添加</string>
+    <string name="action_share_text">分享文本</string>
+    <string name="error_audio_permission">无法保留所选音频的访问权限</string>
+
+    <string name="screen_credentials_title">凭据与授权</string>
+    <string name="input_gemini_api_key">请输入 Gemini API 密钥…</string>
+    <string name="input_hf_access_token">请输入 Hugging Face 访问令牌…</string>
+    <string name="status_api_key_saved">API 密钥已保存</string>
+    <string name="status_hf_token_saved">Hugging Face 访问令牌已保存</string>
+    <string name="action_save_api_key">保存 API 密钥</string>
+    <string name="action_save_hf_token">保存访问令牌</string>
+
+    <string name="screen_models_title">本地模型</string>
+    <string name="status_model_loaded">已加载</string>
+    <string name="dialog_download_models_title">下载模型</string>
+    <string name="dialog_download_models_message">所选模型将从 Hugging Face（https://huggingface.co/litert-community）下载。</string>
+    <string name="status_model_downloading">模型下载中…</string>
+    <string name="status_model_download_progress">下载进度：%1$d%%</string>
+    <string name="status_model_download_success">模型下载成功</string>
+    <string name="error_model_download">模型下载失败，请稍后重试。</string>
+    <string name="error_insufficient_storage">设备存储空间不足，无法下载模型。</string>
+    <string name="error_hf_token_required">下载此模型需要配置 Hugging Face 访问令牌。</string>
+    <string name="error_model_size_unknown">无法获取模型文件大小。模型可能不可用，或当前无法连接到 Hugging Face。</string>
+    <string name="error_storage_unknown">无法确定设备可用存储空间。</string>
+    <string name="model_description_qwen">Qwen 系列对话模型</string>
+    <string name="model_description_phi">Microsoft Phi 系列对话模型</string>
+    <string name="model_description_deepseek">DeepSeek R1 蒸馏模型</string>
+    <string name="model_description_gemma">Gemma 指令微调模型</string>
+    <string name="model_description_llama">Llama 指令微调模型</string>
+    <string name="model_description_default">本地语言模型</string>
+
+    <string name="action_cancel">取消</string>
+    <string name="action_close">关闭</string>
+    <string name="action_remove">删除</string>
+    <string name="action_load_model">加载模型</string>
+    <string name="action_download_model">下载模型</string>
+    <string name="action_share_response">分享回答</string>
+    <string name="action_send_query">发送问题</string>
+    <string name="a11y_more_options">更多选项</string>
+    <string name="a11y_navigate_back">返回</string>
+    <string name="a11y_remove_document">删除此资料</string>
+
+    <string name="prompt_1" translatable="false">
 Here is the retrieved context
 --------------------------------------------------
 $CONTEXT

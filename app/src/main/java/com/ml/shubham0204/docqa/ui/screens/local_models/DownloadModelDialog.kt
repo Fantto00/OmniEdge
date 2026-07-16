@@ -19,32 +19,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.ml.shubham0204.docqa.R
 
 @Composable
 fun DownloadDialogModel(
     dialogState: DownloadModelDialogUIState,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
     if (dialogState.isDialogVisible) {
         Dialog(
             onDismissRequest = onDismiss,
         ) {
             Surface(modifier = Modifier.heightIn(max = 300.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Download Models", style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.dialog_download_models_title), style = MaterialTheme.typography.titleLarge)
                     Text(
-                        "The selected model will be downloaded from HuggingFace (https://huggingface.co/litert-community)",
+                        stringResource(R.string.dialog_download_models_message),
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     if (dialogState.showProgress) {
-                        Text("Model is being downloaded.")
-                        Text("Download Progress: ${dialogState.progress}%")
+                        Text(stringResource(R.string.status_model_downloading))
+                        Text(stringResource(R.string.status_model_download_progress, dialogState.progress))
                         Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
                             progress = { dialogState.progress / 100f },
@@ -52,7 +52,7 @@ fun DownloadDialogModel(
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
-                    Button(onClick = onDismiss) { Text("Close") }
+                    Button(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                 }
             }
         }

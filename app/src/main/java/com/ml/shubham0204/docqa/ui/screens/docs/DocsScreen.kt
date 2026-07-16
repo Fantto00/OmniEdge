@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,6 +59,7 @@ import androidx.compose.ui.window.Dialog
 import com.ml.shubham0204.docqa.data.Document
 import com.ml.shubham0204.docqa.domain.readers.Readers
 import com.ml.shubham0204.docqa.domain.readers.getMimeType
+import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.ui.components.AppAlertDialog
 import com.ml.shubham0204.docqa.ui.components.createAlertDialog
 import com.ml.shubham0204.docqa.ui.theme.DocQATheme
@@ -104,7 +106,7 @@ fun DocsScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Manage Documents",
+                            text = stringResource(R.string.screen_docs_title),
                             style = MaterialTheme.typography.headlineSmall,
                         )
                     },
@@ -112,7 +114,7 @@ fun DocsScreen(
                         IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Navigate Back",
+                                contentDescription = stringResource(R.string.a11y_navigate_back),
                             )
                         }
                     },
@@ -162,6 +164,10 @@ private fun DocsListItem(
     document: Document,
     onRemoveDocClick: ((Long) -> Unit),
 ) {
+    val removeDialogTitle = stringResource(R.string.dialog_remove_document_title)
+    val removeDialogMessage = stringResource(R.string.dialog_remove_document_message)
+    val removeAction = stringResource(R.string.action_remove)
+    val cancelAction = stringResource(R.string.action_cancel)
     Row(
         modifier =
             Modifier
@@ -197,7 +203,10 @@ private fun DocsListItem(
                 color = Color.DarkGray,
             )
             Text(
-                text = "${DocumentSourcePresentation.label(document.sourceType)} · Indexed",
+                text = stringResource(
+                    R.string.document_indexed,
+                    stringResource(DocumentSourcePresentation.labelRes(document.sourceType)),
+                ),
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.DarkGray,
             )
@@ -206,19 +215,17 @@ private fun DocsListItem(
             modifier =
                 Modifier.clickable {
                     createAlertDialog(
-                        dialogTitle = "Remove document",
-                        dialogText =
-                            "Are you sure to remove this document from the database. Responses to " +
-                                "further queries will not refer content from this document.",
-                        dialogPositiveButtonText = "Remove",
+                        dialogTitle = removeDialogTitle,
+                        dialogText = removeDialogMessage,
+                        dialogPositiveButtonText = removeAction,
                         onPositiveButtonClick = { onRemoveDocClick(document.docId) },
-                        dialogNegativeButtonText = "Cancel",
+                        dialogNegativeButtonText = cancelAction,
                         onNegativeButtonClick = {},
                     )
                 },
             imageVector = Icons.Default.Clear,
             tint = Color.DarkGray,
-            contentDescription = "Remove this document",
+            contentDescription = stringResource(R.string.a11y_remove_document),
         )
         Spacer(modifier = Modifier.width(2.dp))
     }
@@ -231,32 +238,32 @@ private fun ChooseDocTypeDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose Document Type") },
+        title = { Text(stringResource(R.string.dialog_choose_document_type)) },
         text = {
             Column {
                 Text(
-                    "PDF",
+                    stringResource(R.string.document_type_pdf),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onDocTypeSelected(Readers.DocumentType.PDF) }
                         .padding(vertical = 16.dp)
                 )
                 Text(
-                    "MS Word (DOCX)",
+                    stringResource(R.string.document_type_word),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onDocTypeSelected(Readers.DocumentType.MS_DOCX) }
                         .padding(vertical = 16.dp)
                 )
                 Text(
-                    "Plain Text",
+                    stringResource(R.string.document_type_plain_text),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onDocTypeSelected(Readers.DocumentType.PLAIN_TEXT) }
                         .padding(vertical = 16.dp)
                 )
                 Text(
-                    "Markdown",
+                    stringResource(R.string.document_type_markdown),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onDocTypeSelected(Readers.DocumentType.MARKDOWN) }
@@ -267,7 +274,7 @@ private fun ChooseDocTypeDialog(
         confirmButton = {},
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -320,7 +327,7 @@ private fun DocOperations(
                 }.onSuccess {
                     onEvent(DocsScreenUIEvent.OnAudioImportSelected(audioUri))
                 }.onFailure {
-                    Toast.makeText(context, "Unable to retain access to the selected audio", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.error_audio_permission), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -358,7 +365,7 @@ private fun DocOperations(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6650a4)),
             onClick = { showChooseDocTypeDialog = true },
         ) {
-            Text(text = "Add From Device", color = Color.White)
+            Text(text = stringResource(R.string.action_add_from_device), color = Color.White)
         }
 
         Button(
@@ -374,7 +381,7 @@ private fun DocOperations(
                 )
             },
         ) {
-            Text(text = "Add Image", color = Color.White)
+            Text(text = stringResource(R.string.action_add_image), color = Color.White)
         }
 
         // Add from URL
@@ -385,7 +392,7 @@ private fun DocOperations(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF643A71)),
             onClick = { showUrlDialog = true },
         ) {
-            Text(text = "Add From URL", color = Color.White)
+            Text(text = stringResource(R.string.action_add_from_url), color = Color.White)
         }
     }
 
@@ -407,9 +414,9 @@ private fun DocOperations(
                 Text(
                     text =
                         if (uiState.speechModel.isReady) {
-                            "ASR Model Ready"
+                            stringResource(R.string.status_asr_model_ready)
                         } else {
-                            "Set Up Chinese ASR"
+                            stringResource(R.string.action_setup_chinese_asr)
                         },
                 )
             }
@@ -419,7 +426,7 @@ private fun DocOperations(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)),
                     onClick = { onEvent(DocsScreenUIEvent.OnSpeechModelSetupCancelled) },
                 ) {
-                    Text(text = "Cancel Setup")
+                    Text(text = stringResource(R.string.action_cancel_setup))
                 }
             }
         }
@@ -440,7 +447,7 @@ private fun DocOperations(
                         !uiState.audioImport.isBusy,
                 onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) },
             ) {
-                Text(text = "Run Audio ASR POC")
+                Text(text = stringResource(R.string.action_run_audio_poc))
             }
             if (uiState.audioPoc.isBusy) {
                 Spacer(modifier = Modifier.width(8.dp))
@@ -448,13 +455,13 @@ private fun DocOperations(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)),
                     onClick = { onEvent(DocsScreenUIEvent.OnAudioPocCancelled) },
                 ) {
-                    Text(text = "Cancel POC")
+                    Text(text = stringResource(R.string.action_cancel_poc))
                 }
             }
         }
         uiState.audioPoc.transcript?.let { transcript ->
             Text(
-                text = "POC transcript: $transcript",
+                text = stringResource(R.string.audio_poc_transcript, transcript),
                 modifier = Modifier.padding(top = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.DarkGray,
@@ -478,7 +485,7 @@ private fun DocOperations(
                         !uiState.audioImport.isBusy,
                 onClick = { audioImportLauncher.launch(arrayOf("audio/*")) },
             ) {
-                Text(text = "Add Audio to Knowledge Base")
+                Text(text = stringResource(R.string.action_add_audio))
             }
             if (uiState.audioImport.isBusy) {
                 Spacer(modifier = Modifier.width(8.dp))
@@ -486,7 +493,7 @@ private fun DocOperations(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E)),
                     onClick = { onEvent(DocsScreenUIEvent.OnAudioImportCancelled) },
                 ) {
-                    Text(text = "Cancel Import")
+                    Text(text = stringResource(R.string.action_cancel_import))
                 }
             }
         }
@@ -499,11 +506,11 @@ private fun DocOperations(
         }
 
         DocDownloadState.DOWNLOAD_SUCCESS -> {
-            Toast.makeText(context, "Document added from URL", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.status_document_added_from_url), Toast.LENGTH_SHORT).show()
         }
 
         DocDownloadState.DOWNLOAD_FAILURE -> {
-            Toast.makeText(context, "Failed to download", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.error_document_download), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -516,10 +523,9 @@ private fun DocOperations(
             },
             title = {
                 Column {
-                    Text("Add document from URL", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.dialog_add_document_from_url), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "The app will determine the type of the document using the file-extension of the downloaded " +
-                            "document",
+                        stringResource(R.string.dialog_add_document_from_url_hint),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -530,7 +536,7 @@ private fun DocOperations(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                         value = pdfUrl,
                         onValueChange = { pdfUrl = it },
-                        label = { Text("Enter URL") },
+                        label = { Text(stringResource(R.string.input_url)) },
                     )
                 }
             },
@@ -540,12 +546,12 @@ private fun DocOperations(
                         onEvent(DocsScreenUIEvent.OnDocURLSubmitted(context, pdfUrl, docType))
                     }
                 }) {
-                    Text("Add")
+                    Text(stringResource(R.string.action_add))
                 }
             },
             dismissButton = {
                 Button(onClick = { showUrlDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -597,13 +603,13 @@ private fun DocDetailDialog() {
                                 context.startActivity(shareIntent)
                             },
                         ) {
-                            Text(text = "Share Text")
+                            Text(text = stringResource(R.string.action_share_text))
                         }
                         Button(
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
                             onClick = { isVisible = false },
                         ) {
-                            Text(text = "Close")
+                            Text(text = stringResource(R.string.action_close))
                         }
                     }
                 }

@@ -29,8 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.data.LocalModel
 import com.ml.shubham0204.docqa.ui.components.AppAlertDialog
 import com.ml.shubham0204.docqa.ui.theme.DocQATheme
@@ -49,7 +51,7 @@ fun LocalModelsScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Manage Local Models",
+                            text = stringResource(R.string.screen_models_title),
                             style = MaterialTheme.typography.headlineSmall,
                         )
                     },
@@ -57,7 +59,7 @@ fun LocalModelsScreen(
                         IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Navigate Back",
+                                contentDescription = stringResource(R.string.a11y_navigate_back),
                             )
                         }
                     },
@@ -101,7 +103,7 @@ private fun LocalModelsList(
         items(modelsList) { localModel ->
             LocalModelListItem(
                 modelName = localModel.name,
-                modelDescription = localModel.description,
+                modelDescription = localizedModelDescription(localModel),
                 isDownloaded =
                     if (context.filesDir != null) {
                         // `context.filesDir` can be null when rendering
@@ -154,13 +156,13 @@ private fun LocalModelListItem(
                             .border(1.dp, Color.Black, RoundedCornerShape(4.dp))
                             .padding(4.dp),
                 ) {
-                    Text("Loaded", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.status_model_loaded), style = MaterialTheme.typography.labelSmall)
                 }
             } else {
                 IconButton(onClick = onLoadModelClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Load model",
+                        contentDescription = stringResource(R.string.action_load_model),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -169,7 +171,7 @@ private fun LocalModelListItem(
             IconButton(onClick = onDownloadClick) {
                 Icon(
                     imageVector = Icons.Default.Download,
-                    contentDescription = "Download model",
+                    contentDescription = stringResource(R.string.action_download_model),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -180,6 +182,17 @@ private fun LocalModelListItem(
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     )
 }
+
+@Composable
+private fun localizedModelDescription(model: LocalModel): String =
+    when {
+        model.name.startsWith("Qwen") -> stringResource(R.string.model_description_qwen)
+        model.name.startsWith("Phi") -> stringResource(R.string.model_description_phi)
+        model.name.startsWith("DeepSeek") -> stringResource(R.string.model_description_deepseek)
+        model.name.startsWith("Gemma") -> stringResource(R.string.model_description_gemma)
+        model.name.startsWith("Llama") -> stringResource(R.string.model_description_llama)
+        else -> stringResource(R.string.model_description_default)
+    }
 
 @Composable
 @Preview

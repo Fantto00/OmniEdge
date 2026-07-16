@@ -14,6 +14,7 @@ import com.ml.shubham0204.docqa.domain.SentenceEmbeddingProvider
 import com.ml.shubham0204.docqa.domain.llm.GeminiRemoteAPI
 import com.ml.shubham0204.docqa.domain.llm.LLMInferenceAPI
 import com.ml.shubham0204.docqa.domain.llm.LiteRTAPI
+import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.ui.components.createAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,14 +88,14 @@ class ChatViewModel(
                     Toast
                         .makeText(
                             context,
-                            "Add documents to execute queries",
+                            context.getString(R.string.screen_chat_add_documents),
                             Toast.LENGTH_LONG,
                         ).show()
                     return
                 }
                 if (event.query.trim().isEmpty()) {
                     Toast
-                        .makeText(context, "Enter a query to execute", Toast.LENGTH_LONG)
+                        .makeText(context, context.getString(R.string.screen_chat_enter_query), Toast.LENGTH_LONG)
                         .show()
                     return
                 }
@@ -106,20 +107,20 @@ class ChatViewModel(
                     _chatScreenUIState.value =
                         _chatScreenUIState.value.copy(question = event.query)
                     val llm = liteRTAPI
-                    Toast.makeText(context, "Using local model...", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.screen_chat_using_local_model), Toast.LENGTH_LONG).show()
                     getAnswer(llm, event.query, event.prompt)
                     return
                 }
 
                 if (!checkValidAPIKey()) {
                     createAlertDialog(
-                        dialogTitle = "Invalid API Key",
-                        dialogText = "Please enter a Gemini API key to use a LLM for generating responses.",
-                        dialogPositiveButtonText = "Add API key",
+                        dialogTitle = context.getString(R.string.dialog_invalid_api_key_title),
+                        dialogText = context.getString(R.string.dialog_invalid_api_key_message),
+                        dialogPositiveButtonText = context.getString(R.string.action_add_api_key),
                         onPositiveButtonClick = {
                             onChatScreenEvent(ChatScreenUIEvent.OnEditCredentialsClick)
                         },
-                        dialogNegativeButtonText = "Open Gemini Console",
+                        dialogNegativeButtonText = context.getString(R.string.action_open_gemini_console),
                         onNegativeButtonClick = {
                             Intent(Intent.ACTION_VIEW).apply {
                                 data = "https://aistudio.google.com/apikey".toUri()
@@ -137,7 +138,7 @@ class ChatViewModel(
                 val apiKey = geminiAPIKey.getAPIKey()
                     ?: throw Exception("Gemini API key is null")
                 val llm = GeminiRemoteAPI(apiKey)
-                Toast.makeText(context, "Using Gemini cloud model...", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.screen_chat_using_gemini), Toast.LENGTH_LONG).show()
                 getAnswer(llm, event.query, event.prompt)
             }
 

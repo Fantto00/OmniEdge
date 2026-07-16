@@ -11,6 +11,7 @@ import com.ketch.Status
 import com.ml.shubham0204.docqa.data.HFAccessToken
 import com.ml.shubham0204.docqa.data.LocalModel
 import com.ml.shubham0204.docqa.domain.llm.LiteRTAPI
+import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.ui.components.createAlertDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -133,15 +134,15 @@ class LocalModelsViewModel(
                     val error = checkIfStorageAvailable(event.model.downloadUrl)
                     if (error != null) {
                         val errorMessage = when (error) {
-                            DownloadPrecheckError.InsufficientStorage -> "The device does not have enough storage space to download the model."
-                            DownloadPrecheckError.APIKeyRequired -> "Downloading this model requires setting a HuggingFace API key."
-                            DownloadPrecheckError.ModelFileSizeUnknown -> "The model file-size cannot be determined. Either the model is not available on HF or the app is not able to connect to HF."
-                            DownloadPrecheckError.AvailableStorageUnknown -> "The available storage space on this device cannot be determined."
+                            DownloadPrecheckError.InsufficientStorage -> context.getString(R.string.error_insufficient_storage)
+                            DownloadPrecheckError.APIKeyRequired -> context.getString(R.string.error_hf_token_required)
+                            DownloadPrecheckError.ModelFileSizeUnknown -> context.getString(R.string.error_model_size_unknown)
+                            DownloadPrecheckError.AvailableStorageUnknown -> context.getString(R.string.error_storage_unknown)
                         }
                         createAlertDialog(
-                            dialogTitle = "Error",
+                            dialogTitle = context.getString(R.string.dialog_error_title),
                             dialogText = errorMessage,
-                            dialogPositiveButtonText = "Ok",
+                            dialogPositiveButtonText = context.getString(R.string.action_close),
                             onPositiveButtonClick = {},
                             dialogNegativeButtonText = null,
                             onNegativeButtonClick = null
@@ -272,7 +273,7 @@ class LocalModelsViewModel(
                                 Toast
                                     .makeText(
                                         context,
-                                        "Model downloaded successfully",
+                                        context.getString(R.string.status_model_download_success),
                                         Toast.LENGTH_LONG,
                                     ).show()
                             }
@@ -291,7 +292,7 @@ class LocalModelsViewModel(
                                 Toast
                                     .makeText(
                                         context,
-                                        "Model downloaded failed ${ketchDownload.failureReason}",
+                                        context.getString(R.string.error_model_download),
                                         Toast.LENGTH_LONG,
                                     ).show()
                             }
