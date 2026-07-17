@@ -1,6 +1,8 @@
 package com.ml.shubham0204.docqa.domain.ingestion
 
-/** Normalizes Vosk token spacing for indexing without changing non-CJK word boundaries. */
+/**
+ * 修复 Vosk 中文输出中的多余空格
+ */
 object AudioTranscriptNormalizer {
     private val chinesePunctuation = setOf('，', '。', '！', '？', '；', '：', '、')
 

@@ -3,10 +3,16 @@ package com.ml.shubham0204.docqa.domain
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ * 项目的文本切分器，负责把长文档切成适合嵌入和检索的小块（chunk）
+ */
 class WhiteSpaceSplitter {
     companion object {
         private val sentenceDelimiters = setOf('。', '！', '？', '；', '.', '!', '?', ';')
 
+        /**
+         * 切分的入口函数
+         */
         fun createChunks(
             docText: String,
             chunkSize: Int,
@@ -17,13 +23,15 @@ class WhiteSpaceSplitter {
             val textChunks = ArrayList<String>()
             docText.split(separatorParagraph).forEach { paragraph ->
                 val chunks =
-                    if (paragraph.none(Char::isWhitespace)) {
+                    if (paragraph.none(Char::isWhitespace)) {// 段落不包含空格（中文）
                         createWhitespaceFreeChunks(paragraph, chunkSize)
                     } else {
+                        // 包含空格
                         createWhitespaceChunks(paragraph, chunkSize, separator)
                     }
 
                 val overlappingChunks = ArrayList<String>(chunks)
+                // 对切出的块之间生成重叠块
                 if (chunkOverlap > 1 && chunks.isNotEmpty()) {
                     for (i in 0..<chunks.size - 1) {
                         val overlapStart = max(0, chunks[i].length - chunkOverlap)
@@ -41,6 +49,9 @@ class WhiteSpaceSplitter {
             return textChunks
         }
 
+        /**
+         * 段落包含空格（英文、中英混合）的切分
+         */
         private fun createWhitespaceChunks(
             paragraph: String,
             chunkSize: Int,
@@ -74,6 +85,9 @@ class WhiteSpaceSplitter {
             return chunks
         }
 
+        /**
+         * 段落不包含空格（中文）的切分
+         */
         private fun createWhitespaceFreeChunks(
             paragraph: String,
             chunkSize: Int,

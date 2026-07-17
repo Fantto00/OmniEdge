@@ -5,6 +5,9 @@ import io.objectbox.annotation.HnswIndex
 import io.objectbox.annotation.Id
 import io.objectbox.annotation.Index
 
+/**
+ * 定义分块、文档、检索上下文的数据模型
+ */
 @Entity
 data class Chunk(
     @Id var chunkId: Long = 0,

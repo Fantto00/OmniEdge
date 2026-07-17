@@ -22,6 +22,9 @@ import java.util.UUID
 import java.util.zip.ZipInputStream
 import javax.net.ssl.HttpsURLConnection
 
+/**
+ * 语音模型的完整生命周期管理器，负责下载、验证、解压、安装和加载模型
+ */
 @Single
 class SpeechModelManager(
     private val context: Context,
@@ -37,7 +40,7 @@ class SpeechModelManager(
                 return@withContext installedModel
             }
 
-            requireAvailableStorage()
+            requireAvailableStorage() // 检查容量
             val archive = File(context.cacheDir, "${SpeechModelConfig.MODEL_ID}.zip")
             val temporaryRoot =
                 File(
@@ -79,6 +82,9 @@ class SpeechModelManager(
         clearPendingDownloadId()
     }
 
+    /**
+     * 基于 HttpURLConnection 的下载器，使用Ketch库管理下载任务，并提供进度回调
+     */
     private suspend fun downloadArchive(
         archive: File,
         onProgress: (String) -> Unit,
@@ -213,6 +219,9 @@ class SpeechModelManager(
         model.close()
     }
 
+    /**
+     * 容量检查
+     */
     private fun requireAvailableStorage() {
         val availableBytes = StatFs(context.noBackupFilesDir.path).availableBytes
         require(availableBytes >= SpeechModelConfig.MIN_AVAILABLE_STORAGE_BYTES) {

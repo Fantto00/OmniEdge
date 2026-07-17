@@ -1,5 +1,8 @@
 package com.ml.shubham0204.docqa.domain.asr
 
+/**
+ * 对音频的格式要求：需要归一为当前格式
+ */
 object AudioPocLimits {
     const val TARGET_SAMPLE_RATE_HZ = 16_000
     const val TARGET_CHANNEL_COUNT = 1

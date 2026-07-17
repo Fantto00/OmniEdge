@@ -1,5 +1,8 @@
 package com.ml.shubham0204.docqa.domain.ingestion
 
+/**
+ * 定义图片的要求参数
+ */
 object OcrImageLimits {
     const val MAX_IMAGE_PIXELS = 16_000_000L
 

@@ -3,6 +3,9 @@ package com.ml.shubham0204.docqa.domain.ingestion
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+/**
+ * PDF参数限制
+ */
 object ScannedPdfOcrLimits {
     const val MIN_EMBEDDED_TEXT_CHARACTERS = 80
     const val MAX_PAGES = 10

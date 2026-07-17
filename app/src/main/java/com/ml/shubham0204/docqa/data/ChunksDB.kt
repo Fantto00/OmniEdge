@@ -2,6 +2,9 @@ package com.ml.shubham0204.docqa.data
 
 import org.koin.core.annotation.Single
 
+/**
+ * 感觉可以理解为和分块相关的数据库操作类
+ */
 @Single
 class ChunksDB {
     private val chunksBox = ObjectBoxStore.store.boxFor(Chunk::class.java)
@@ -10,6 +13,9 @@ class ChunksDB {
         chunksBox.put(chunk)
     }
 
+    /**
+     * 做近邻检索，返回 TopK 当前K=5
+     */
     fun getSimilarChunks(
         queryEmbedding: FloatArray,
         n: Int = 5,

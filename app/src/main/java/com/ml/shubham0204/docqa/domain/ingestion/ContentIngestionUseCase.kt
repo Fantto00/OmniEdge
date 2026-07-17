@@ -13,6 +13,9 @@ import kotlinx.coroutines.ensureActive
 import org.koin.core.annotation.Single
 import java.security.MessageDigest
 
+/**
+ * 负责整个业务流程，从用户导入文档到入库
+ */
 @Single
 class ContentIngestionUseCase(
     private val contentResolver: ContentResolver,
@@ -22,14 +25,18 @@ class ContentIngestionUseCase(
     private val scannedPdfOcrExtractor: ScannedPdfOcrExtractor,
     private val voskTranscriber: VoskTranscriber,
 ) {
+    /**
+     * 文档内容处理并入库
+     */
     suspend fun ingestDocument(
         source: ContentSource.Document,
         onProgress: (String) -> Unit = {},
     ): IngestionResult {
         onProgress("Extracting document text...")
-        val primaryExtraction = extractDocument(source)
+        val primaryExtraction = extractDocument(source) // 先提取文档文本
         val extractionResult =
             if (
+                //是pdf且小于80字：走OCR
                 source.documentType == Readers.DocumentType.PDF &&
                 ScannedPdfOcrLimits.shouldUseOcr(primaryExtraction.text)
             ) {
@@ -41,6 +48,9 @@ class ContentIngestionUseCase(
         return indexExtraction(source, extractionResult, onProgress)
     }
 
+    /**
+     * 图片内容处理并入库
+     */
     suspend fun ingestImage(
         source: ContentSource.Image,
         onProgress: (String) -> Unit = {},
@@ -49,13 +59,16 @@ class ContentIngestionUseCase(
         return indexExtraction(source, imageOcrExtractor.extract(source), onProgress)
     }
 
+    /**
+     * 音频内容处理并入库
+     */
     suspend fun ingestAudio(
         source: ContentSource.Audio,
         onProgress: (String) -> Unit = {},
     ): IngestionResult {
         onProgress("Transcribing audio offline...")
-        val transcription = voskTranscriber.transcribe(source, onProgress)
-        val indexableText = AudioTranscriptNormalizer.normalizeForIndexing(transcription.text)
+        val transcription = voskTranscriber.transcribe(source, onProgress) // 调用 Vosk 模型能力，把音频转成原始文本
+        val indexableText = AudioTranscriptNormalizer.normalizeForIndexing(transcription.text) // Vosk 出来的文本有空格，需要去掉
         return indexExtraction(
             source = source,
             extractionResult =
@@ -73,16 +86,25 @@ class ContentIngestionUseCase(
         )
     }
 
+
+    /**
+     * 把抽取好的文本变成持久化的向量数据：入库过程
+     * 怎么实现正确入库，在取消的时候不留脏数据？
+     * 取消支持：每步重型操作前都插入了取消点，也就是ensureActive()
+     * 不留脏数据：通过 ObjectBox的 runInTx 实现事务（ runInTx 自带事务属性）
+     */
     private suspend fun indexExtraction(
         source: ContentSource,
         extractionResult: ExtractionResult,
         onProgress: (String) -> Unit,
     ): IngestionResult {
-        currentCoroutineContext().ensureActive()
+        currentCoroutineContext().ensureActive() // ensureActive：在协程中检查是否被取消
+        //先保证非空文本
         val indexableText = requireNotNull(extractionResult.text.takeIf(String::isNotBlank)) {
             "No text was extracted from ${source.displayName}"
         }
         onProgress("Creating chunks...")
+        // 调用 WhiteSpaceSplitter.createChunks() 方法分块
         val textChunks =
             WhiteSpaceSplitter.createChunks(
                 indexableText,
@@ -93,6 +115,7 @@ class ContentIngestionUseCase(
             "No indexable chunks were created for ${source.displayName}"
         }
         onProgress("Creating embeddings...")
+        // 逐块嵌入为chunk
         val chunks =
             textChunks.mapIndexed { index, textChunk ->
                 currentCoroutineContext().ensureActive()
@@ -100,11 +123,12 @@ class ContentIngestionUseCase(
                 Chunk(
                     docFileName = source.displayName,
                     chunkData = textChunk,
-                    chunkEmbedding = sentenceEncoder.encodeText(textChunk),
+                    chunkEmbedding = sentenceEncoder.encodeText(textChunk), // 每块文本调用 SentenceEmbeddingProvider 编码为向量
                 )
             }
         onProgress("Saving document...")
         currentCoroutineContext().ensureActive()
+        //原子入库：文档和块一起入库
         val documentId =
             documentsDB.addDocumentAndChunks(
                 document =
@@ -125,6 +149,9 @@ class ContentIngestionUseCase(
         return IngestionResult(documentId = documentId, chunkCount = chunks.size)
     }
 
+    /**
+     * 处理文档类来源（PDF、DOCX、Markdown、TXT）的文本抽取
+     */
     private fun extractDocument(source: ContentSource.Document): ExtractionResult {
         val text =
             requireNotNull(contentResolver.openInputStream(source.uri)) {

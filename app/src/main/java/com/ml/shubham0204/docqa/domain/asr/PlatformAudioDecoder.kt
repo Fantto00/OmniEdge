@@ -10,6 +10,9 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import org.koin.core.annotation.Single
 
+/**
+ * 使用 Android 平台的 MediaCodec 解码音频文件为 PCM 数据
+ */
 data class DecodedAudio(
     val mimeType: String,
     val declaredDurationMs: Long?,

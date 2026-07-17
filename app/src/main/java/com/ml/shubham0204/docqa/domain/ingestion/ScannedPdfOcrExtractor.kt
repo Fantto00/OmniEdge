@@ -13,16 +13,20 @@ import kotlinx.coroutines.withTimeout
 import org.koin.core.annotation.Single
 import java.io.File
 
+/**
+ * 字数少于80，被视为扫描版本的 PDF 的抓取类
+ */
 @Single
 class ScannedPdfOcrExtractor(
     private val contentResolver: ContentResolver,
     private val imageOcrExtractor: ImageOcrExtractor,
 ) {
+    // GPT写的 可读性差
     suspend fun extract(
         source: ContentSource.Document,
         onProgress: (String) -> Unit = {},
     ): ExtractionResult =
-        withTimeout(ScannedPdfOcrLimits.MAX_OCR_DURATION_MS) {
+        withTimeout(ScannedPdfOcrLimits.MAX_OCR_DURATION_MS) { // 超时限制
             val pageTexts = mutableListOf<String>()
             openFileDescriptor(source.uri).use { fileDescriptor ->
                 PdfRenderer(fileDescriptor).use { pdfRenderer ->
@@ -39,7 +43,7 @@ class ScannedPdfOcrExtractor(
                             val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
                             try {
                                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                                pageTexts += imageOcrExtractor.recognize(InputImage.fromBitmap(bitmap, 0))
+                                pageTexts += imageOcrExtractor.recognize(InputImage.fromBitmap(bitmap, 0)) // 在这里用图片引擎识别
                             } finally {
                                 bitmap.recycle()
                             }

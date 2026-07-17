@@ -1,5 +1,8 @@
 package com.ml.shubham0204.docqa.domain.asr
 
+/**
+ * 配置语音识别模型的相关信息
+ */
 object SpeechModelConfig {
     const val MODEL_ID = "vosk-model-small-cn-0.22"
     const val ARCHIVE_URL = "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip"

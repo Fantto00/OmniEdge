@@ -3,7 +3,9 @@ package com.ml.shubham0204.docqa.domain.asr
 import java.io.ByteArrayOutputStream
 import kotlin.math.floor
 
-/** Converts decoded PCM-16LE frames to the Vosk-required 16 kHz mono stream without buffering audio. */
+/**
+ * 对音频进行归一操作
+ */
 class Pcm16MonoNormalizer(
     private val inputSampleRate: Int,
     private val inputChannelCount: Int,

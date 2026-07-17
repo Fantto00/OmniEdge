@@ -14,11 +14,17 @@ import org.koin.core.annotation.Single
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+/**
+ * 使用 ML Kit 的中文文本识别器从图像中提取文本
+ */
 @Single
 class ImageOcrExtractor(
     private val context: Context,
     private val contentResolver: ContentResolver,
 ) {
+    /**
+     * 抓取图像中文本入口函数
+     */
     suspend fun extract(source: ContentSource.Image): ExtractionResult {
         validateImageDimensions(source)
         val text = recognize(InputImage.fromFilePath(context, source.uri))
@@ -31,6 +37,9 @@ class ImageOcrExtractor(
         )
     }
 
+    /**
+     * 使用 ML Kit 的中文文本识别器识别图像中的文本
+     */
     suspend fun recognize(inputImage: InputImage): String {
         val recognizer =
             TextRecognition.getClient(
@@ -43,6 +52,7 @@ class ImageOcrExtractor(
         }
     }
 
+    // 参数检查
     private fun validateImageDimensions(source: ContentSource.Image) {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         requireNotNull(contentResolver.openInputStream(source.uri)) {
@@ -53,6 +63,10 @@ class ImageOcrExtractor(
         OcrImageLimits.requireSupportedDimensions(bounds.outWidth, bounds.outHeight)
     }
 
+    /**
+     * 把 ML Kit 的回调式 API 桥接为 Kotlin 协程挂起函数，支持取消。
+     * 不太懂
+     */
     private suspend fun Task<Text>.awaitText(): String =
         suspendCancellableCoroutine { continuation ->
             this@awaitText

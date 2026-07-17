@@ -3,6 +3,9 @@ package com.ml.shubham0204.docqa.domain.ingestion
 import android.net.Uri
 import com.ml.shubham0204.docqa.domain.readers.Readers
 
+/**
+ * 定义用户选中的文件类型：文档/图片/音频
+ */
 sealed interface ContentSource {
     val uri: Uri
     val sourceUri: String

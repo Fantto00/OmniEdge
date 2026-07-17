@@ -18,6 +18,9 @@ data class AudioTranscriptionPocResult(
     val processingDurationMs: Long,
 )
 
+/**
+ * 负责音频转录的业务逻辑，使用 Vosk 进行离线中文语音识别
+ */
 @Single
 class VoskTranscriber(
     private val speechModelManager: SpeechModelManager,

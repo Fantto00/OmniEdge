@@ -2,6 +2,9 @@ package com.ml.shubham0204.docqa.domain.readers
 
 import com.ml.shubham0204.docqa.domain.readers.Readers.DocumentType
 
+/**
+ * 各种 Reader 的定义
+ */
 class Readers {
     enum class DocumentType {
         PDF,
