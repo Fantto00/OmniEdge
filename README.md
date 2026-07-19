@@ -93,8 +93,6 @@ cd OmniEdge
 - 当前嵌入模型标注为英文模型；中文 OCR/ASR 内容的检索质量需要通过 Recall@5、首条命中率和端到端延迟等基准持续验证。
 - 大图片、扫描 PDF 的页数与像素、音频时长均受限，以避免内存压力和长时间阻塞。
 
-详细的实施范围、处理上限和验收要求见 [多模态 RAG 二次开发文档](./docs/multimodal-rag-development.md)。
-
 ## 致谢
 
 OmniEdge 基于 [shubham0204/OnDevice-RAG-Android](https://github.com/shubham0204/OnDevice-RAG-Android) 二次开发，并在其 Android 端侧 RAG 基础上扩展了统一导入、中文 OCR、扫描 PDF OCR 回退和离线音频转写能力。感谢原项目及其依赖社区提供的工作基础。
