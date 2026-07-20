@@ -92,6 +92,7 @@ data class AudioPocUIState(
 data class AudioImportUIState(
     val status: String = "请选择音频文件以将离线转写内容加入知识库",
     val isBusy: Boolean = false,
+    val indexedChunkCount: Int? = null,
 )
 
 data class DocsScreenUIState(
@@ -408,10 +409,9 @@ class DocsViewModel(
                         )
                     updateAudioImportState(
                         AudioImportUIState(
-                            status = "音频已加入知识库（${result.chunkCount} 个片段）。",
+                            indexedChunkCount = result.chunkCount,
                         ),
                     )
-                    setImportMessage("音频转写内容已加入知识库")
                 } catch (_: CancellationException) {
                     updateAudioImportState(AudioImportUIState(status = "已取消音频导入。"))
                 } catch (exception: Exception) {

@@ -1,6 +1,8 @@
 package com.ml.shubham0204.docqa.ui.screens.docs
 
 import AppProgressDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.text.format.DateUtils
 import android.widget.Toast
@@ -467,11 +469,33 @@ private fun DocOperations(
                 color = Color.DarkGray,
                 maxLines = 4,
             )
+            Button(
+                modifier = Modifier.padding(top = 4.dp),
+                onClick = {
+                    val clipboard = context.getSystemService(ClipboardManager::class.java)
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText(
+                            context.getString(R.string.clipboard_label_audio_transcript),
+                            transcript,
+                        ),
+                    )
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.status_audio_transcript_copied),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+            ) {
+                Text(text = stringResource(R.string.action_copy_audio_transcript))
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = uiState.audioImport.status,
+            text =
+                uiState.audioImport.indexedChunkCount?.let { chunkCount ->
+                    stringResource(R.string.status_audio_added_to_knowledge_base, chunkCount)
+                } ?: uiState.audioImport.status,
             style = MaterialTheme.typography.labelSmall,
             color = Color.DarkGray,
         )

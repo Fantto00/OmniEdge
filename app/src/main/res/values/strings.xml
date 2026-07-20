@@ -38,8 +38,12 @@
     <string name="action_run_audio_poc">运行离线转写测试</string>
     <string name="action_cancel_poc">取消测试</string>
     <string name="audio_poc_transcript">测试转写结果：%1$s</string>
+    <string name="action_copy_audio_transcript">复制转写文本</string>
+    <string name="clipboard_label_audio_transcript">音频转写文本</string>
+    <string name="status_audio_transcript_copied">转写文本已复制</string>
     <string name="action_add_audio">将音频加入知识库</string>
     <string name="action_cancel_import">取消导入</string>
+    <string name="status_audio_added_to_knowledge_base">音频已加入知识库（%1$d 个片段）</string>
     <string name="status_document_added_from_url">已通过链接导入资料</string>
     <string name="error_document_download">下载失败，请检查链接后重试。</string>
     <string name="dialog_add_document_from_url">通过链接导入资料</string>
