@@ -1,6 +1,10 @@
 package com.ml.shubham0204.docqa.ui.screens.chat
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,8 +25,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +55,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.ui.components.AppAlertDialog
 import com.ml.shubham0204.docqa.ui.components.createAlertDialog
@@ -103,7 +110,7 @@ fun ChatScreen(
                 Column {
                     QALayout(screenUiState)
                     Spacer(modifier = Modifier.height(8.dp))
-                    QueryInput(onScreenEvent)
+                    QueryInput(screenUiState, onScreenEvent)
                 }
             }
             AppAlertDialog()
@@ -236,59 +243,141 @@ private fun ColumnScope.QALayout(screenUiState: ChatScreenUIState) {
 }
 
 @Composable
-private fun QueryInput(onEvent: (ChatScreenUIEvent) -> Unit) {
-    var questionText by remember { mutableStateOf("") }
+private fun QueryInput(
+    screenUiState: ChatScreenUIState,
+    onEvent: (ChatScreenUIEvent) -> Unit,
+) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        TextField(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            value = questionText,
-            onValueChange = { questionText = it },
-            shape = RoundedCornerShape(16.dp),
-            colors =
-                TextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    disabledTextColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                ),
-            placeholder = { Text(text = stringResource(R.string.screen_chat_input_hint)) },
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        IconButton(
-            modifier = Modifier.background(Color.Blue, CircleShape),
-            onClick = {
-                keyboardController?.hide()
-
-                try {
-                    onEvent(
-                        ChatScreenUIEvent.ResponseGeneration.Start(
-                            questionText,
-                            context.getString(R.string.prompt_1),
-                        ),
-                    )
-                } catch (_: Exception) {
-                    createAlertDialog(
-                        dialogTitle = context.getString(R.string.dialog_error_title),
-                        dialogText = context.getString(R.string.error_response_generation),
-                        dialogPositiveButtonText = context.getString(R.string.action_close),
-                        onPositiveButtonClick = {},
-                        dialogNegativeButtonText = null,
-                        onNegativeButtonClick = {},
-                    )
-                }
-            },
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = stringResource(R.string.action_send_query),
-                tint = Color.White,
+    val voiceQuery = screenUiState.voiceQuery
+    val isListening = voiceQuery is VoiceQueryUIState.Listening
+    val isStopping = voiceQuery is VoiceQueryUIState.Stopping
+    val microphonePermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            onEvent(
+                if (granted) {
+                    ChatScreenUIEvent.OnVoiceQueryStart
+                } else {
+                    ChatScreenUIEvent.OnVoiceQueryPermissionDenied
+                },
             )
+        }
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                value = screenUiState.draftQuestion,
+                onValueChange = { onEvent(ChatScreenUIEvent.OnQuestionDraftChanged(it)) },
+                shape = RoundedCornerShape(16.dp),
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        disabledTextColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
+                placeholder = { Text(text = stringResource(R.string.screen_chat_input_hint)) },
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                enabled = !isStopping && !screenUiState.isGeneratingResponse,
+                modifier =
+                    Modifier.background(
+                        if (isListening || isStopping) Color(0xFFB3261E) else Color(0xFF2E7D32),
+                        CircleShape,
+                    ),
+                onClick = {
+                    when {
+                        isListening -> onEvent(ChatScreenUIEvent.OnVoiceQueryStop)
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED -> onEvent(ChatScreenUIEvent.OnVoiceQueryStart)
+                        else -> microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+            ) {
+                Icon(
+                    imageVector = if (isListening || isStopping) Icons.Default.Stop else Icons.Default.Mic,
+                    contentDescription =
+                        stringResource(
+                            if (isListening || isStopping) {
+                                R.string.action_stop_voice_query
+                            } else {
+                                R.string.action_start_voice_query
+                            },
+                        ),
+                    tint = Color.White,
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                enabled = !isListening && !isStopping,
+                modifier = Modifier.background(Color.Blue, CircleShape),
+                onClick = {
+                    keyboardController?.hide()
+
+                    try {
+                        onEvent(
+                            ChatScreenUIEvent.ResponseGeneration.Start(
+                                screenUiState.draftQuestion,
+                                context.getString(R.string.prompt_1),
+                            ),
+                        )
+                    } catch (_: Exception) {
+                        createAlertDialog(
+                            dialogTitle = context.getString(R.string.dialog_error_title),
+                            dialogText = context.getString(R.string.error_response_generation),
+                            dialogPositiveButtonText = context.getString(R.string.action_close),
+                            onPositiveButtonClick = {},
+                            dialogNegativeButtonText = null,
+                            onNegativeButtonClick = {},
+                        )
+                    }
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = stringResource(R.string.action_send_query),
+                    tint = Color.White,
+                )
+            }
+        }
+        when (voiceQuery) {
+            is VoiceQueryUIState.Listening -> {
+                Text(
+                    text =
+                        voiceQuery.partialText.takeIf(String::isNotBlank)?.let {
+                            stringResource(R.string.status_voice_query_partial, it)
+                        } ?: stringResource(R.string.status_voice_query_listening),
+                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.DarkGray,
+                )
+            }
+
+            VoiceQueryUIState.Stopping -> {
+                Text(
+                    text = stringResource(R.string.status_voice_query_stopping),
+                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.DarkGray,
+                )
+            }
+
+            is VoiceQueryUIState.Error -> {
+                Text(
+                    text = voiceQuery.message,
+                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFB3261E),
+                )
+            }
+
+            VoiceQueryUIState.Idle -> Unit
         }
     }
 }

@@ -11,13 +11,16 @@ import com.ml.shubham0204.docqa.data.DocumentsDB
 import com.ml.shubham0204.docqa.data.GeminiAPIKey
 import com.ml.shubham0204.docqa.data.RetrievedContext
 import com.ml.shubham0204.docqa.domain.SentenceEmbeddingProvider
+import com.ml.shubham0204.docqa.domain.asr.RealtimeVoiceQueryTranscriber
 import com.ml.shubham0204.docqa.domain.llm.GeminiRemoteAPI
 import com.ml.shubham0204.docqa.domain.llm.LLMInferenceAPI
 import com.ml.shubham0204.docqa.domain.llm.LiteRTAPI
 import com.ml.shubham0204.docqa.R
 import com.ml.shubham0204.docqa.ui.components.createAlertDialog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +34,16 @@ sealed interface ChatScreenUIEvent {
     data object OnOpenDocsClick : ChatScreenUIEvent
 
     data object OnLocalModelsClick : ChatScreenUIEvent
+
+    data class OnQuestionDraftChanged(
+        val draftQuestion: String,
+    ) : ChatScreenUIEvent
+
+    data object OnVoiceQueryStart : ChatScreenUIEvent
+
+    data object OnVoiceQueryStop : ChatScreenUIEvent
+
+    data object OnVoiceQueryPermissionDenied : ChatScreenUIEvent
 
     sealed class ResponseGeneration {
         data class Start(
@@ -49,6 +62,20 @@ sealed interface ChatScreenUIEvent {
     }
 }
 
+sealed interface VoiceQueryUIState {
+    data object Idle : VoiceQueryUIState
+
+    data class Listening(
+        val partialText: String = "",
+    ) : VoiceQueryUIState
+
+    data object Stopping : VoiceQueryUIState
+
+    data class Error(
+        val message: String,
+    ) : VoiceQueryUIState
+}
+
 sealed interface ChatNavEvent {
     data object None : ChatNavEvent
 
@@ -61,9 +88,11 @@ sealed interface ChatNavEvent {
 
 data class ChatScreenUIState(
     val question: String = "",
+    val draftQuestion: String = "",
     val response: String = "",
     val isGeneratingResponse: Boolean = false,
     val retrievedContextList: List<RetrievedContext> = emptyList(),
+    val voiceQuery: VoiceQueryUIState = VoiceQueryUIState.Idle,
 )
 
 @KoinViewModel
@@ -74,15 +103,32 @@ class ChatViewModel(
     private val geminiAPIKey: GeminiAPIKey,
     private val sentenceEncoder: SentenceEmbeddingProvider,
     private val liteRTAPI: LiteRTAPI,
+    private val realtimeVoiceQueryTranscriber: RealtimeVoiceQueryTranscriber,
 ) : ViewModel() {
     private val _chatScreenUIState = MutableStateFlow(ChatScreenUIState())
     val chatScreenUIState: StateFlow<ChatScreenUIState> = _chatScreenUIState
 
     private val _navEventChannel = Channel<ChatNavEvent>()
     val navEventChannel = _navEventChannel.receiveAsFlow()
+    private var voiceQueryJob: Job? = null
 
     fun onChatScreenEvent(event: ChatScreenUIEvent) {
         when (event) {
+            is ChatScreenUIEvent.OnQuestionDraftChanged -> {
+                _chatScreenUIState.value =
+                    _chatScreenUIState.value.copy(draftQuestion = event.draftQuestion)
+            }
+
+            ChatScreenUIEvent.OnVoiceQueryStart -> startVoiceQuery()
+
+            ChatScreenUIEvent.OnVoiceQueryStop -> stopVoiceQuery()
+
+            ChatScreenUIEvent.OnVoiceQueryPermissionDenied -> {
+                updateVoiceQueryState(
+                    VoiceQueryUIState.Error(context.getString(R.string.error_voice_query_permission_denied)),
+                )
+            }
+
             is ChatScreenUIEvent.ResponseGeneration.Start -> {
                 if (!checkNumDocuments()) {
                     Toast
@@ -214,4 +260,66 @@ class ChatViewModel(
     fun checkNumDocuments(): Boolean = documentsDB.getDocsCount() > 0
 
     fun checkValidAPIKey(): Boolean = geminiAPIKey.getAPIKey() != null
+
+    override fun onCleared() {
+        realtimeVoiceQueryTranscriber.stop()
+        voiceQueryJob?.cancel()
+        super.onCleared()
+    }
+
+    private fun startVoiceQuery() {
+        if (voiceQueryJob?.isActive == true || _chatScreenUIState.value.isGeneratingResponse) return
+
+        voiceQueryJob =
+            viewModelScope.launch {
+                try {
+                    if (!realtimeVoiceQueryTranscriber.isModelInstalled()) {
+                        updateVoiceQueryState(
+                            VoiceQueryUIState.Error(context.getString(R.string.error_voice_query_model_not_ready)),
+                        )
+                        return@launch
+                    }
+                    realtimeVoiceQueryTranscriber.prepareForRecording()
+                    updateVoiceQueryState(VoiceQueryUIState.Listening())
+                    val finalText =
+                        realtimeVoiceQueryTranscriber.transcribe { partialText ->
+                            if (_chatScreenUIState.value.voiceQuery is VoiceQueryUIState.Listening) {
+                                updateVoiceQueryState(VoiceQueryUIState.Listening(partialText))
+                            }
+                        }
+                    if (finalText.isBlank()) {
+                        updateVoiceQueryState(
+                            VoiceQueryUIState.Error(context.getString(R.string.error_voice_query_empty)),
+                        )
+                    } else {
+                        _chatScreenUIState.value =
+                            _chatScreenUIState.value.copy(
+                                draftQuestion = mergeDraftQuestion(finalText),
+                                voiceQuery = VoiceQueryUIState.Idle,
+                            )
+                    }
+                } catch (_: CancellationException) {
+                    updateVoiceQueryState(VoiceQueryUIState.Idle)
+                } catch (_: Exception) {
+                    updateVoiceQueryState(
+                        VoiceQueryUIState.Error(context.getString(R.string.error_voice_query_failed)),
+                    )
+                }
+            }
+    }
+
+    private fun stopVoiceQuery() {
+        if (voiceQueryJob?.isActive != true) return
+        updateVoiceQueryState(VoiceQueryUIState.Stopping)
+        realtimeVoiceQueryTranscriber.stop()
+    }
+
+    private fun updateVoiceQueryState(state: VoiceQueryUIState) {
+        _chatScreenUIState.value = _chatScreenUIState.value.copy(voiceQuery = state)
+    }
+
+    private fun mergeDraftQuestion(finalText: String): String =
+        listOf(_chatScreenUIState.value.draftQuestion.trim(), finalText.trim())
+            .filter(String::isNotEmpty)
+            .joinToString(separator = " ")
 }

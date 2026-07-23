@@ -4,6 +4,15 @@
     <string name="screen_chat_title">智能问答</string>
     <string name="screen_chat_empty">导入资料后，即可向知识库提问</string>
     <string name="screen_chat_input_hint">向知识库提问…</string>
+    <string name="action_start_voice_query">开始语音输入</string>
+    <string name="action_stop_voice_query">停止语音输入</string>
+    <string name="status_voice_query_listening">正在聆听…</string>
+    <string name="status_voice_query_partial">识别中：%1$s</string>
+    <string name="status_voice_query_stopping">正在整理识别结果…</string>
+    <string name="error_voice_query_permission_denied">未授予麦克风权限，无法使用语音输入。</string>
+    <string name="error_voice_query_model_not_ready">请先在知识库页面配置中文语音识别模型。</string>
+    <string name="error_voice_query_empty">未识别到有效语音，请重试。</string>
+    <string name="error_voice_query_failed">语音输入失败，请重试。</string>
     <string name="screen_chat_context">参考资料</string>
     <string name="screen_chat_response">回答</string>
     <string name="screen_chat_using_local_model">正在使用本地模型…</string>
